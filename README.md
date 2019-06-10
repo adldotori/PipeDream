@@ -2,7 +2,7 @@
 
 This repository is what I develop in AI lab.
 
-<strong> GOAL : Parallel Training in PipeDream
+<strong> GOAL : Parallel Training in PipeDream </strong>
 
 ## First step. Socket Programming
 Two computers connect with socket. 
