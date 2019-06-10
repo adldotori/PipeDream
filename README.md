@@ -2,11 +2,13 @@
 
 This repository is what I develop in AI lab.
 
-<strong> GOAL : Parallel Training in PipeDream </strong>
+<strong><em> GOAL : Parallel Training in PipeDream </em></strong>
 
 ## First step. Socket Programming
-Two computers connect with socket. 
-tag:first_step
+Two computers connect with socket.
+
+<strong> tag:first_step </strong>
+
 add code "define NOT_AIO" in both files.
 1. gcc -o server server.c
 2. ./server
