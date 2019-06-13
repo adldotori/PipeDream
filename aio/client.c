@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <aio.h>
 #include <time.h>
 #include <errno.h>
@@ -15,7 +15,7 @@
 //#define NOT_AIO
 
 const char CLIENT_IP[20] = "127.0.0.1";
-const int CLIENT_PORT = 9998;
+const int CLIENT_PORT = 9995;
 
 int main(int argc, char * argv[]){
     if(argc < 2) {
@@ -26,7 +26,7 @@ int main(int argc, char * argv[]){
     clock_t start,end;
     start = clock();
     struct aiocb my_aiocb;
-    int client_socket = socket(PF_INET, SOCK_STREAM, 0);
+    int client_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (client_socket == -1)
     {
         printf("socket ERROR\n");
@@ -41,7 +41,7 @@ int main(int argc, char * argv[]){
         printf("connect() ERROR\n");
         exit(1);
     }
-    printf("client socket = [%d]\n\n",client_socket);
+    printf("client socket = [%d]\n",client_socket);
     
     end = clock();
     printf("connect socket : %.3fms\n",1000*(float)(end - start)/CLOCKS_PER_SEC);
@@ -62,20 +62,23 @@ int main(int argc, char * argv[]){
 #else
     printf("read aio\n");
     
-    fcntl(client_socket, F_SETFL, O_NONBLOCK);
+    int fd = open( "file.txt", O_RDWR );
+    if (fd < 0) perror("open");
+    
     int cnt=0;
     while(1){
-        my_aiocb.aio_buf = malloc(BUFSIZE);
+        my_aiocb.aio_buf = buf+cnt*BUFSIZE;
         if (!my_aiocb.aio_buf) perror("malloc");
 
         my_aiocb.aio_fildes = client_socket;
-        my_aiocb.aio_buf = buf;
         my_aiocb.aio_nbytes = BUFSIZE;
         my_aiocb.aio_offset = (cnt++)*BUFSIZE;
         
         int ret = aio_read(&my_aiocb);
-        if (ret < 0) perror("aio_read");
-        printf("%d",errno);
+        if (ret < 0) {
+            perror("aio_read");
+            printf("errno:%d\n",errno);
+        }
         while ( aio_error( &my_aiocb ) == EINPROGRESS ) ;
         if ((ret = aio_return( &my_aiocb )) > 0)
         {
@@ -83,15 +86,17 @@ int main(int argc, char * argv[]){
         }
         else
         {
-            printf("read failed\n");
+            printf("EOF\n");
             break;
         }
     }
 #endif
+    printf("%d %d\n",fd, client_socket);
     close(client_socket);
     printf("strlen(buf) : %lu\n",strlen(buf));
-    int fd = open(argv[1] ,O_RDWR | O_CREAT, 0644);
-    write(fd,buf,strlen(buf));
-    close(fd);
+    int fd1 = open(argv[1] ,O_RDWR | O_CREAT, 0644);
+    write(fd1,buf,strlen(buf));
+    close(fd1);
 }
+
 

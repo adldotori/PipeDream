@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <aio.h>
 #include <time.h>
 #include <errno.h>
@@ -15,15 +15,15 @@
 //#define NOT_AIO
 
 const char SERVER_IP[20] = "127.0.0.1";
-const int SERVER_PORT = 9998;
+const int SERVER_PORT = 9995;
 
 int main(){
     int fd = open("file.txt",O_RDONLY);
     char buf[FILESIZE];
     read(fd,buf,FILESIZE);
     close(fd);
+    
     struct sockaddr_in server, client;
-    struct aiocb my_aiocb;
     int server_socket = socket(PF_INET, SOCK_STREAM, 0);
     if (server_socket == -1)
     {
@@ -56,33 +56,28 @@ int main(){
             exit(1);
         }
         end = clock();
-        printf("connect socket : %.3fms\n",1000*(float)(end - start)/CLOCKS_PER_SEC);
-        
-        start = clock();
-        printf("strlen(buf) : %lu\n",strlen(buf));
-        
-#ifdef NOT_AIO
+        printf("connect socket [%d] : %.3fms\n",client_socket,1000*(float)(end - start)/CLOCKS_PER_SEC);
+
+#ifdef NOT_AIO 
         printf("write io\n");
+        start = clock();
         write(client_socket, buf, strlen(buf));
-
+        end = clock();
 #else
+        struct aiocb my_aiocb;
         printf("write aio\n");
-        
-        fcntl(client_socket, F_SETFL, O_NONBLOCK);
         bzero( (char *)&my_aiocb, sizeof(struct aiocb) );
-
-        my_aiocb.aio_buf = malloc(FILESIZE);
-        if (!my_aiocb.aio_buf) perror("malloc");
-
-        my_aiocb.aio_fildes = client_socket;
         my_aiocb.aio_buf = buf;
+        my_aiocb.aio_fildes = client_socket;
         my_aiocb.aio_nbytes = strlen(buf);
         my_aiocb.aio_offset = 0;
         int ret = aio_write(&my_aiocb);
-        printf("%d",errno);
-        if (ret < 0) perror("aio_write");
-
-        while ( aio_error( &my_aiocb ) == EINPROGRESS ) ;
+        if (ret < 0) {
+            perror("aio_write");
+            printf("errno:%d\n",errno);
+        }
+        while ( aio_error( &my_aiocb ) == EINPROGRESS );
+        printf("%d",aio_error(&my_aiocb));
         if ((ret = aio_return( &my_aiocb )) > 0)
         {
             printf("ret [%d]\n", ret);
@@ -91,10 +86,11 @@ int main(){
         {
             printf("write failed\n");
         }
-#endif
         end = clock();
+#endif
         printf("write file : %.3fms\n\n",1000*(float)(end - start)/CLOCKS_PER_SEC);
         close(client_socket);
     }
     close(server_socket);
 }
+
