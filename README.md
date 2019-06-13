@@ -20,5 +20,12 @@ go to tag : <strong><first_step></strong>
 5. ./client output
 
 ## Second step. AIO Socket Programming
-Two computers connect with socket and communicates in the way of Asynchronous non-blocking I/O instead Synchronous blocking I/O. 
+Two computers connect with socket and communicates in the way of <strong>Asynchronous non-blocking I/O</strong> instead of <strong>Synchronous blocking I/O</strong>. 
+
+go to tag : <strong><second_step></strong>
+
+1. gcc -o server server.c aiocb.c -lrt
+2. ./server <ip> <port>
+3. gcc -o client client.c aiocb.c -lrt
+4. ./client <file\'s name> <ip> <port>
 
