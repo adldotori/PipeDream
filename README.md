@@ -2,18 +2,23 @@
 
 This repository is what I develop in AI lab.
 
-<strong><em> GOAL : Parallel Training in PipeDream </em></strong>
+<strong><u> GOAL : Parallel Training in PipeDream </u></strong>
+
+(Please compile in Linux instead of MAC OS X)
 
 ## First step. Socket Programming
 Two computers connect with socket.
 
-<strong> tag:first_step </strong>
+#### HOW TO EXECUTE
 
-add code "define NOT_AIO" in both files.
-1. gcc -o server server.c
-2. ./server
-3. gcc -o client client.c
-4. ./client output
+go to tag : <strong><first_step></strong>
+
+1. add code "#define NOT_AIO" in both files.
+2. gcc -o server server.c -lrt
+3. ./server
+4. gcc -o client client.c -lrt
+5. ./client output
 
 ## Second step. AIO Socket Programming
 Two computers connect with socket and communicates in the way of Asynchronous non-blocking I/O instead Synchronous blocking I/O. 
+
