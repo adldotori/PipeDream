@@ -7,8 +7,8 @@ This repository is what I developed in AI lab.
 (Please compile in Linux instead of MAC OS X)
 
 
-## First level : AIO
----
+## Level 1 : AIO
+
 ### First step. Socket Programming
 Two computers connect with socket.
 
@@ -23,6 +23,7 @@ Two computers connect with socket.
     6. ./client output
 
 ### Second step. AIO Socket Programming
+
 Two computers connect with socket and communicates in the way of <strong>Asynchronous non-blocking I/O</strong> instead of <strong>Synchronous blocking I/O</strong>. 
 
 * HOW TO EXECUTE
@@ -35,8 +36,8 @@ Two computers connect with socket and communicates in the way of <strong>Asynchr
     5. ./client <file\'s name> \<ip> \<port>
 
 
-## Second level : DL
----
+## Level 2 : DL
+
 ### First step. Linear Regression
 Simple Linear Regression with neuron class
 
@@ -47,5 +48,16 @@ Simple Linear Regression with neuron class
     2. g++ -o step1 step1.cpp
     3. ./step1
 
-## Third level : GPU
+### Second step. Multi Variable Linear Regression
+
+Multi Variable Linear Regression with neuron class
+
+* How to execute
+
+    go to tag : **<DL_2nd_step>**
+    1. go to DL folder
+    2. g++ -o step2 step2.cpp
+    3. ./step2
+
+## Level 3 : GPU
 ---
