@@ -10,14 +10,17 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
-#define LEARNING_RATE 0.1
+#define LEARNING_RATE 0.00001
 #define delta 0.00001
-#define DATA_SET 100
+#define DATA_SET 60000
 #define active 3       // 1:sigmoid, 2:ReLU
 #define how_cost 2     // 1:MSE, 2:ACE
-#define how_optimize 1 // 1:gradient descent
+#define how_optimize 2 // 1:gradient descent
 using namespace std;
 
+enum mode {train=0,test};
+
+int cost_cnt = 0;
 class Network
 {
 private:
@@ -49,6 +52,7 @@ private:
         for (int i = 0; i < out; i++)
         {
             ret[i] = exp(val[i]) / sum;
+            if(ret[i] < exp(-30)) ret[i] = exp(-30);
         }
 #endif
         return ret;
@@ -68,8 +72,9 @@ private:
         predict[data] = activation(ret);
     }
 
-    double cost(void)
+    double cost(enum mode mode)
     {
+        cost_cnt++;
         double cost = 0;
 #if how_cost == 1 // MSE(mean square error)
         for (int i = 0; i < len; i++)
@@ -85,7 +90,8 @@ private:
 #elif how_cost == 2 // ACE(average cross entropy)
         for (int i = 0; i < len; i++)
         {
-            feedForward(i);
+            if(mode==train)
+                feedForward(i);
             for (int j = 0; j < out; j++)
             {
                 cost -= output[i * out + j] * log(predict[i][j]);
@@ -116,12 +122,25 @@ private:
             b[j] -= delta;
             b[j] -= LEARNING_RATE * (cost_after - cost_before) / delta;
         }
+#elif how_optimize == 2 // get cross entropy's derivate function
+        cost(train);
+        for (int j = 0; j < out; j++)
+        {
+            for(int k = 0; k < len; k++)
+            {
+                for (int i = 0; i < in; i++)
+                {
+                    w[i][j] -= LEARNING_RATE * (predict[k][j]-output[k*out+j]) * input[k*in+i];
+                }
+                b[j] -= LEARNING_RATE * (predict[k][j]-output[k*out+j]);
+            }
+        }
 #endif
     }
 
     void print(void)
     {
-        cout << "COST : " << cost() << endl;
+        cout << "COST : " << cost(test) << endl;
         // cout << "WEIGHT, BIAS"<< endl;
         // for(int i=0;i<out;i++){
         //     cout << i << " : ";
@@ -134,7 +153,6 @@ private:
 
     void prediction(void)
     {
-        cout << endl;
         cout << "Prediction: " << endl;
         int correct = 0;
         for (int i = 0; i < len; i++)
@@ -142,13 +160,13 @@ private:
             feedForward(i);
             int max = max_element(predict[i],predict[i]+out*sizeof(double)-1)-predict[i];
             if(output[i*out+max]==1) correct++;
-            for (int j = 0; j < out; j++)
-            {
-                cout << predict[i][j] << " ";
-            }
-            cout << endl;
+            // for (int j = 0; j < out; j++)
+            // {
+            //     cout << predict[i][j] << " ";
+            // }
+            // cout << endl;
         }
-        cout << endl << "Correct Rate : " << (double)correct/len << endl;
+        cout << "Correct Rate : " << (double)correct/len << endl << endl;
     }
 
 public:
@@ -187,9 +205,9 @@ public:
             {
                 cout << "training " << i + 1 << endl;
                 print();
+                prediction();
             }
         }
-        prediction();
     }
 };
 
@@ -224,5 +242,5 @@ int main()
     Network net(784, 10, DATA_SET);
     
     net.getData(input, output);
-    net.training(100);
+    net.training(1000);
 }
