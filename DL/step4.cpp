@@ -124,12 +124,12 @@ private:
         return cost();
 #elif how_optimize == 2 // get cross entropy's derivate function
         double cost = 0;
-        for (int bat = 0; bat < batch_size; bat++)
+        for (int bat = 0; bat < len/batch_size; bat++)
         {
             cost += getCost(train, bat);
             for (int j = 0; j < out; j++)
             {
-                for(int k = 0; k < len/batch_size; k++)
+                for(int k = 0; k < batch_size; k++)
                 {
                     for (int i = 0; i < in; i++)
                     {
@@ -162,8 +162,7 @@ private:
         int correct = 0;
         for (int i = 0; i < len; i++)
         {
-            feedForward(i);
-            int max = max_element(predict[i],predict[i]+out*sizeof(double)-1)-predict[i];
+            int max = max_element(predict[i],predict[i]+out)-predict[i];
             if(output[i*out+max]==1) correct++;
             // for (int j = 0; j < out; j++)
             // {
@@ -243,5 +242,5 @@ int main()
     Network net(784, 10, DATA_SET);
     
     net.getData(input, output);
-    net.training(1000);
+    net.training(10);
 }
