@@ -10,7 +10,7 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
-#define LEARNING_RATE 0.00001
+#define LEARNING_RATE 0.01
 #define delta 0.00001
 #define DATA_SET 60000
 #define active 3       // 1:sigmoid, 2:ReLU
@@ -24,7 +24,7 @@ class Network
 {
 private:
     int in, out, len; // input node, output node, cnt of data
-    int batch_size = 100;
+    int batch_size = 10;
     double **w, *b;
     double *input, *output; // data*in, data*out
     double **predict;
@@ -242,5 +242,5 @@ int main()
     Network net(784, 10, DATA_SET);
     
     net.getData(input, output);
-    net.training(10);
+    net.training(30);
 }
