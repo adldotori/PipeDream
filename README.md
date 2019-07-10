@@ -54,10 +54,15 @@ Multi Variable Linear Regression with neuron class
 
 * How to execute
 
-    go to tag : **<DL_2nd_step>**
-    1. go to DL folder
-    2. g++ -o step2 step2.cpp
-    3. ./step2
+    same before step
+
+### Third step. Basic Neural Network
+
+basic neural network(use softmax cross-entropy)
+
+* How to execute
+
+    same before step
 
 ## Level 3 : GPU
 ---
