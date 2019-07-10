@@ -9,7 +9,7 @@ This repository is what I developed in AI lab.
 
 ## Level 1 : AIO
 
-### First step. Socket Programming
+### 1st step. Socket Programming
 Two computers connect with socket.
 
 * HOW TO EXECUTE
@@ -22,7 +22,7 @@ Two computers connect with socket.
     5. gcc -o client client.c -lrt
     6. ./client output
 
-### Second step. AIO Socket Programming
+### 2nd step. AIO Socket Programming
 
 Two computers connect with socket and communicates in the way of <strong>Asynchronous non-blocking I/O</strong> instead of <strong>Synchronous blocking I/O</strong>. 
 
@@ -38,7 +38,7 @@ Two computers connect with socket and communicates in the way of <strong>Asynchr
 
 ## Level 2 : DL
 
-### First step. Linear Regression
+### 1st step. Linear Regression
 Simple Linear Regression with neuron class
 
 * How to execute
@@ -48,7 +48,7 @@ Simple Linear Regression with neuron class
     2. g++ -o step1 step1.cpp
     3. ./step1
 
-### Second step. Multi Variable Linear Regression
+### 2nd step. Multi Variable Linear Regression
 
 Multi Variable Linear Regression with neuron class
 
@@ -56,13 +56,26 @@ Multi Variable Linear Regression with neuron class
 
     same before step
 
-### Third step. Basic Neural Network
+### 3rd step. Basic Neural Network
 
 basic neural network(use softmax cross-entropy)
 
 * How to execute
 
     same before step
+
+### 4th step. MNIST(Basic Neural Network)
+
+adapt basic neural network to mnist
+
+The correct solution was fitted with a probability of <strong>93%</strong>.
+
+* How to execute
+
+    same before step
+
+    you can change LEARNING_RATE, DATA_SET, batch_size
+
 
 ## Level 3 : GPU
 ---
