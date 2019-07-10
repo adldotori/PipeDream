@@ -20,11 +20,11 @@ using namespace std;
 
 enum mode {train=0,test};
 
-int cost_cnt = 0;
 class Network
 {
 private:
     int in, out, len; // input node, output node, cnt of data
+    int batch_size = 100;
     double **w, *b;
     double *input, *output; // data*in, data*out
     double **predict;
@@ -72,9 +72,8 @@ private:
         predict[data] = activation(ret);
     }
 
-    double cost(enum mode mode)
+    double getCost(enum mode mode, int batch)
     {
-        cost_cnt++;
         double cost = 0;
 #if how_cost == 1 // MSE(mean square error)
         for (int i = 0; i < len; i++)
@@ -88,12 +87,11 @@ private:
         }
         cost /= len;
 #elif how_cost == 2 // ACE(average cross entropy)
-        for (int i = 0; i < len; i++)
+        for (int i = batch*batch_size; i < (batch+1)*batch_size; i++)
         {
             if(mode==train)
                 feedForward(i);
-            for (int j = 0; j < out; j++)
-            {
+            for (int j = 0; j < out; j++) {
                 cost -= output[i * out + j] * log(predict[i][j]);
             }
         }
@@ -102,7 +100,8 @@ private:
         // etc ...
         return cost;
     }
-    void optimize(void)
+
+    double optimize(void)
     {
 #if how_optimize == 1 // gradient descent
         double cost_before, cost_after;
@@ -122,25 +121,31 @@ private:
             b[j] -= delta;
             b[j] -= LEARNING_RATE * (cost_after - cost_before) / delta;
         }
+        return cost();
 #elif how_optimize == 2 // get cross entropy's derivate function
-        cost(train);
-        for (int j = 0; j < out; j++)
+        double cost = 0;
+        for (int bat = 0; bat < batch_size; bat++)
         {
-            for(int k = 0; k < len; k++)
+            cost += getCost(train, bat);
+            for (int j = 0; j < out; j++)
             {
-                for (int i = 0; i < in; i++)
+                for(int k = 0; k < len/batch_size; k++)
                 {
-                    w[i][j] -= LEARNING_RATE * (predict[k][j]-output[k*out+j]) * input[k*in+i];
+                    for (int i = 0; i < in; i++)
+                    {
+                        w[i][j] -= LEARNING_RATE * (predict[bat*batch_size+k][j]-output[(bat*batch_size+k)*out+j]) * input[(bat*batch_size+k)*in+i];
+                    }
+                    b[j] -= LEARNING_RATE * (predict[bat*batch_size+k][j]-output[(bat*batch_size+k)*out+j]);
                 }
-                b[j] -= LEARNING_RATE * (predict[k][j]-output[k*out+j]);
             }
         }
+        return cost;
 #endif
     }
 
     void print(void)
     {
-        cout << "COST : " << cost(test) << endl;
+        // cout << "COST : " << getCost(test) << endl;
         // cout << "WEIGHT, BIAS"<< endl;
         // for(int i=0;i<out;i++){
         //     cout << i << " : ";
@@ -200,13 +205,9 @@ public:
     {
         for (int i = 0; i < step; i++)
         {
-            optimize();
-            if ((i + 1) % 1 == 0)
-            {
-                cout << "training " << i + 1 << endl;
-                print();
-                prediction();
-            }
+            cout << "training " << i + 1 << endl;
+            cout << "cost : " << optimize() << endl;
+            prediction();
         }
     }
 };
