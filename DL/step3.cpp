@@ -1,4 +1,4 @@
-//multi variable linear regression
+// basic neural network
 #include <iostream>
 #include <limits.h>
 #include <float.h>

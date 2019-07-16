@@ -12,10 +12,8 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
-#define LEARNING_RATE 0.1
-#define DATA_SET 1
-#define how_cost 2     // 1:MSE, 2:ACE
-#define how_optimize 2 // 1:gradient descent
+#define LEARNING_RATE 0.001
+#define DATA_SET 1000
 using namespace std;
 
 enum mode
@@ -29,8 +27,13 @@ enum active_mode
     ReLU,
     softmax
 };
+enum layer_type
+{
+    Hidden = 0,
+    Output
+};
 
-class Network
+class Layer
 {
 private:
     int in, out, len; // input node, output node, cnt of data
@@ -38,8 +41,11 @@ private:
     double **w, *b;
     double *input, *output; // data*in, data*out
     double *predict;
-    double *next_weight;
+    int pre_out;
+    double *pre_pardiff;
+    double *post_pardiff;
     enum active_mode active;
+    enum layer_type layer_type;
 
     void activation(int data, double *val)
     {
@@ -71,11 +77,18 @@ private:
                 ret[i] = exp(val[i]) / sum;
                 if (ret[i] < exp(-30))
                     ret[i] = exp(-30);
+                if (ret[i] == 1)
+                    ret[i] = 1 - exp(-30);
             }
             break;
         }
-        for (int i = 0; i < out; i++)
+        for (int i = 0; i < out; i++) {
             predict[data * out + i] = ret[i];
+            // cout << predict[data* out + i] << ' ';
+        }
+        // for(int i=0;i<out;i++)
+        //     cout << output[data*out + i];
+        // cout << endl;
     }
 
     void forwardProp(void)
@@ -88,108 +101,51 @@ private:
                 for (int j = 0; j < in; j++)
                 {
                     ret[i] += w[j][i] * input[data * in + j];
-                    if(i==0)
-                        cout << w[j][i] << " " << input[data*in+j]<<endl;
                 }
                 ret[i] += b[i];
-            }
-            if (out == 10)
-            {
-                for (int i = 0; i < out; i++)
-                    cout << ret[i] << " ";
-                cout << endl;
             }
             activation(data, ret);
         }
     }
 
-    double cost(void)
+    double cost(void) // cross_entropy
     {
         double cost = 0;
-#if how_cost == 1 // MSE(mean square error)
-        for (int i = batch * batch_size; i < (batch + 1) * batch_size; i++)
-        {
-            for (int j = 0; j < out; j++)
-            {
-                double val = predict[i][j] - output[i * out + j];
-                cost += 0.5 * SQR(val);
-            }
-        }
-        cost /= len;
-#elif how_cost == 2 // ACE(average cross entropy)
         for (int i = 0; i < len; i++)
         {
             for (int j = 0; j < out; j++)
             {
-                cost -= output[i * out + j] * log(predict[i * out + j]);
-                // cout << " cost :"  << predict[i*out+j];
+                if(predict[i*out+j]<exp(-30) || predict[i*out+j]>=1) cout << predict[i*out+j]<< " ";
+                cost -= output[i * out + j] * log(predict[i * out + j]) - (1- output[i * out + j]) * log(1 - predict[i * out + j]);
             }
         }
         cost /= len;
-#endif
-        // etc ...
+
         return cost;
     }
 
     void backwardProp(void)
     {
-        // cross-entropy
-        switch (active)
+        for (int bat = 0; bat < len / batch_size; bat++)
         {
-        case sigmoid:
-            break;
-        case ReLU:
-            for (int bat = 0; bat < len / batch_size; bat++)
+            for (int k = 0; k < batch_size; k++)
             {
                 for (int j = 0; j < out; j++)
                 {
-                    for (int k = 0; k < batch_size; k++)
+                    int out_cnt = (bat * batch_size + k) * out + j;
+                    for (int i = 0; i < in; i++)
                     {
-                        for (int i = 0; i < in; i++)
-                        {
-                            w[i][j] -= LEARNING_RATE * output[(bat * batch_size + k) * in + i] * next_weight[j];
-                            // cout <<  output[(bat*batch_size+k)*in+i] << " ";
-                        }
-                        b[j] -= LEARNING_RATE * next_weight[j];
-                        // cout << b[j];
+                        int in_cnt = (bat * batch_size + k) * in + i;
+                        w[i][j] -= LEARNING_RATE * pre_pardiff[out_cnt] * input[in_cnt];
                     }
-                    // cout << j << next_weight[j] << ' ';
+                    b[j] -= LEARNING_RATE * pre_pardiff[out_cnt];
                 }
             }
-            break;
-            // for(int k = 0; k < batch_size; k++)
-            //     {
-            //         int positive = predict[(bat*batch_size+k)*out+j] > 0;
-            //         for (int i = 0; i < in; i++)
-            //         {
-            //             w[i][j] -= LEARNING_RATE * positive * (-output[(bat*batch_size+k)*out+j]/predict[(bat*batch_size+k)*out+j]) * input[(bat*batch_size+k)*in+i];
-            //         }
-            //         b[j] -= LEARNING_RATE * positive * (-output[(bat*batch_size+k)*out+j]/predict[(bat*batch_size+k)*out+j];
-            //     }
-
-        case softmax:
-            for (int bat = 0; bat < len / batch_size; bat++)
-            {
-                for (int j = 0; j < out; j++)
-                {
-                    for (int k = 0; k < batch_size; k++)
-                    {
-                        for (int i = 0; i < in; i++)
-                        {
-                            w[i][j] -= LEARNING_RATE * (predict[(bat * batch_size + k) * out + j] - output[(bat * batch_size + k) * out + j]) * input[(bat * batch_size + k) * in + i];
-                            // cout << w[i][j] << " ";
-                        }
-                        b[j] -= LEARNING_RATE * (predict[(bat * batch_size + k) * out + j] - output[(bat * batch_size + k) * out + j]);
-                        // cout << b[j];
-                    }
-                }
-            }
+            // cout << j << pre_pardiff[j] << ' ';
         }
     }
-
     void prediction(void)
     {
-        cout << "Prediction: " << endl;
         int correct = 0;
         for (int i = 0; i < len; i++)
         {
@@ -197,29 +153,41 @@ private:
             if (output[i * out + max] == 1)
                 correct++;
         }
-        cout << "Correct Rate : " << (double)correct / len << endl
-             << endl;
+        cout << "Correct Rate : " << (double)correct / len << endl;
     }
 
     void send_before(void)
     {
         if (before == NULL)
             return;
-        this->before->next_weight = new double[in];
-        for (int i = 0; i < in; i++)
-        {
-            double val = 0;
-            for (int j = 0; j < out; j++)
-            {
-                for (int k = 0; k < len; k++)
-                {
-                    if (input[k * in + i] > 0 && predict[k * out + j] > 0)
-                        val -= output[k * out + j] * w[i][j] / predict[k * out + j];
-                    // cout << predict[k * out + j] << endl;
+        cout << endl << endl << endl;
+        for (int bat = 0; bat < len / batch_size; bat++) {
+            for (int k = 0; k < batch_size; k++) {
+                for (int i = 0; i < in; i++) {
+                    for (int j = 0; j < out; j++) {
+                        int in_cnt = (bat * batch_size + k) * in + i;
+                        int out_cnt = (bat * batch_size + k) * out + j;
+                        switch (active)
+                        {
+                        case sigmoid:
+                        case softmax:
+                            post_pardiff[in_cnt] += pre_pardiff[out_cnt] * w[i][j] * input[in_cnt] * (1 - input[in_cnt]);
+                        case ReLU:
+                            if(input[in_cnt]>0)
+                                post_pardiff[in_cnt] += pre_pardiff[out_cnt] * w[i][j];
+                        }
+                    }
                 }
             }
-            this->before->next_weight[i] = val;
-            // cout << val << " ";
+        }
+        this->before->pre_out = out;
+        this->before->pre_pardiff = new double[len * out];
+        for (int i = 0; i < len; i++)
+        {
+            for (int j = 0; j < out; j++)
+            {
+                this->before->pre_pardiff[i * out + j] = post_pardiff[i * out + j];
+            }
         }
     }
 
@@ -247,8 +215,8 @@ private:
     }
 
 public:
-    Network *before, *after;
-    Network(int in_, int out_, int len, enum active_mode active)
+    Layer *before, *after;
+    Layer(int in_, int out_, int len, enum active_mode active, enum layer_type layer_type)
     {
         // initialization
         srand(time(NULL));
@@ -256,6 +224,7 @@ public:
         out = out_;
         this->len = len;
         this->active = active;
+        this->layer_type = layer_type;
         w = new double *[in];
 
         srand(time(NULL));
@@ -266,7 +235,7 @@ public:
             {
                 for (int j = 0; j < out; j++)
                 {
-                    w[i][j] = gaussianRandom() / sqrt(in/2);
+                    w[i][j] = gaussianRandom() / sqrt(in / 2);
                 }
             }
             else // Xavier initialization
@@ -281,6 +250,7 @@ public:
         for (int i = 0; i < out; i++)
             b[i] = 0;
         predict = new double[len * out];
+        post_pardiff = new double[len * out];
         before = NULL;
         after = NULL;
         batch_size = 10;
@@ -288,7 +258,7 @@ public:
             batch_size = 1;
     }
 
-    void connect(Network *other)
+    void connect(Layer *other)
     {
         this->after = other;
         other->before = this;
@@ -304,30 +274,28 @@ public:
     {
         for (int i = 0; i < step; i++)
         {
-            cout << "training " << i + 1 << endl;
+            if (in == 784)
+                cout << "training " << i + 1 << endl;
             forwardProp();
             send_after();
-            cout << "inout" << in << out;
             if (after != NULL)
                 after->training(1);
-            if (out == 10)
+            if (layer_type == Output)
             {
-                for (int j = 0; j < in; j++)
+                pre_pardiff = new double[len * out];
+                for(int j = 0; j < len; j++)
                 {
-                    cout << input[j] << " ";
-                }
-                for (int j = 0; j < out; j++)
-                {
-                    cout << predict[j] << " ";
-                }
-                for (int j = 0; j < out; j++)
-                {
-                    cout << output[j];
+                    for(int k = 0; k < out; k++)
+                    {
+                        int out_cnt = j * out + k;
+                        pre_pardiff[out_cnt] = predict[out_cnt] - output[out_cnt];
+                    }
                 }
             }
             backwardProp();
-            if(active == softmax)
+            if (layer_type == Output)
                 cout << "COST : " << cost() << endl;
+                prediction();
             send_before();
         }
     }
@@ -367,10 +335,11 @@ int main()
     double *output = new double[784 * DATA_SET];
     download(&input, &output);
 
-    Network net1(784, 100, DATA_SET, ReLU);
-    Network net2(100, 10, DATA_SET, softmax);
-    net1.connect(&net2);
+    // Layer hidden_layer(784, 100, DATA_SET, ReLU, Hidden);
+    Layer output_layer(784, 10, DATA_SET, softmax, Output);
+    // hidden_layer.connect(&output_layer);
 
-    net1.getData(input, output);
-    net1.training(10);
+    // hidden_layer.getData(input, output);
+    output_layer.getData(input, output);
+    output_layer.training(20);
 }

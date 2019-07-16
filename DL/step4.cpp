@@ -1,4 +1,4 @@
-//multi variable linear regression
+// mnist(basic neural network)
 #include <iostream>
 #include <algorithm>
 #include <limits.h>

@@ -1,4 +1,4 @@
-//multi variable linear regression
+// multi variable linear regression
 #include <iostream>
 #include <limits.h>
 #include <float.h>
