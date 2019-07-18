@@ -76,6 +76,17 @@ The correct solution was fitted with a probability of <strong>93%</strong>.
 
     you can change LEARNING_RATE, DATA_SET, batch_size
 
+### 5th step. MNIST(Basic Multi Layer Neural Network)
+
+adapt basic multi layer neural network to mnist
+
+The correct solution was fitted with a probability of <strong>92%</strong>.
+
+Hidden layer uses ReLU activation, output layer uses softmax activation.
+
+* How to execute
+
+    same before step
 
 ## Level 3 : GPU
 ---

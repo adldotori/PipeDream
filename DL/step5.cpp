@@ -12,8 +12,9 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
-#define LEARNING_RATE 0.001
+#define LEARNING_RATE 0.0001
 #define DATA_SET 60000
+#define BATCH_SIZE 100
 using namespace std;
 
 enum mode
@@ -41,9 +42,8 @@ private:
     double **w, *b;
     double *input, *output; // data*in, data*out
     double *predict;
-    int pre_out;
     double *pre_pardiff;
-    double *post_pardiff;
+    Layer *before, *after;
     enum active_mode active;
     enum layer_type layer_type;
 
@@ -67,14 +67,16 @@ private:
             break;
         case softmax:
             double sum = 0;
+            double * max = new double[out];
             for (int i = 0; i < out; i++)
             {
-                // cout << val[i] << " ";
-                sum += exp(val[i]);
+                if(val[i] > 300) cout << val[i] << ' ' << output[k*out+i] << endl;
+                max[i] = exp(val[i]);
+                sum += max[i];
             }
             for (int i = 0; i < out; i++)
             {
-                ret[i] = exp(val[i]) / sum;
+                ret[i] = max[i] / sum;
                 if (ret[i] < exp(-30))
                     ret[i] = exp(-30);
                 if (ret[i] == 1)
@@ -84,11 +86,7 @@ private:
         }
         for (int i = 0; i < out; i++) {
             predict[k * out + i] = ret[i];
-            // cout << predict[data* out + i] << ' ';
         }
-        // for(int i=0;i<out;i++)
-        //     cout << output[data*out + i];
-        // cout << endl;
     }
 
     void forwardProp(int batch)
@@ -139,6 +137,7 @@ private:
             }
         }
     }
+
     void prediction(void)
     {
         int correct = 0;
@@ -156,7 +155,6 @@ private:
     {
         if (after == NULL)
             return;
-        this->after->getData(predict, output);
     }
 
     void send_before(int batch)
@@ -164,6 +162,8 @@ private:
         if (before == NULL)
             return;
         
+        double * post_pardiff =  new double[len * in];
+
         for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++) {
             for (int i = 0; i < in; i++) {
                 for (int j = 0; j < out; j++) {
@@ -181,14 +181,14 @@ private:
                 }
             }
         }
-
-        this->before->pre_out = out;
-        this->before->pre_pardiff = new double[len * out];
-        for (int i = 0; i < len; i++)
+        if(batch == 0) {
+            before->pre_pardiff = new double[len * in];
+        }
+        for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
         {
-            for (int j = 0; j < out; j++)
+            for (int i = 0; i < in; i++)
             {
-                this->before->pre_pardiff[i * out + j] = post_pardiff[i * out + j];
+                before->pre_pardiff[k * in + i] = post_pardiff[k * in + i];
             }
         }
     }
@@ -210,7 +210,6 @@ private:
     }
 
 public:
-    Layer *before, *after;
     Layer(int in_, int out_, int len, enum active_mode active, enum layer_type layer_type)
     {
         // initialization
@@ -245,16 +244,20 @@ public:
         for (int i = 0; i < out; i++)
             b[i] = 0;
         predict = new double[len * out];
-        post_pardiff = new double[len * out];
         before = NULL;
         after = NULL;
-        batch_size = 100;
+        batch_size = BATCH_SIZE;
         if (len < batch_size)
             batch_size = 1;
     }
 
     void connect(Layer *other)
     {
+        if(other->in != this->out) 
+        {
+            cout << "It's impossible because the number of layer's node is different." << endl;
+            exit(1);
+        }
         this->after = other;
         other->before = this;
     }
@@ -262,7 +265,12 @@ public:
     void getData(double *input, double *output)
     {
         this->input = input;
-        this->output = output;
+        if(after!=NULL) {
+            after->getData(predict,output);
+        }
+        else {
+            this->output = output;
+        }
     }
 
     void batch_training(int batch)
@@ -296,8 +304,7 @@ public:
     {
         for (int i = 0; i < step; i++)
         {
-            if (in == 784)
-                cout << "training " << i + 1 << endl;
+            cout << "training " << i + 1 << endl;
             for(int j = 0; j < len / batch_size; j++)
             {
                 batch_training(j);
@@ -314,10 +321,6 @@ void download(double *input[], double *output[])
     if (ret)
     {
         cout << "An error occured: " << ret << endl;
-    }
-    else
-    {
-        cout << "image count: " << cnt << endl;
     }
     int tmp = 0;
     for (int i = 0; i < DATA_SET; i++)
@@ -337,14 +340,28 @@ void download(double *input[], double *output[])
 int main()
 {
     double *input = new double[784 * DATA_SET];
-    double *output = new double[784 * DATA_SET];
+    double *output = new double[10 * DATA_SET];
     download(&input, &output);
 
-    // Layer hidden_layer(784, 100, DATA_SET, ReLU, Hidden);
-    Layer output_layer(784, 10, DATA_SET, softmax, Output);
-    // hidden_layer.connect(&output_layer);
+    
+    // Layer output_layer(784, 10, DATA_SET, softmax, Output);
 
-    // hidden_layer.getData(input, output);
-    output_layer.getData(input, output);
-    output_layer.training(20);
+    // output_layer.getData(input, output);
+    // output_layer.training(30);
+
+    Layer hidden_layer(784, 256, DATA_SET, ReLU, Hidden);
+    Layer output_layer(256, 10, DATA_SET, softmax, Output);
+    hidden_layer.connect(&output_layer);
+
+    hidden_layer.getData(input, output);
+    hidden_layer.training(30);
+
+    // Layer hidden_layer1(784, 256, DATA_SET, ReLU, Hidden);
+    // Layer hidden_layer2(256, 256, DATA_SET, ReLU, Hidden);
+    // Layer output_layer(256, 10, DATA_SET, softmax, Output);
+    // hidden_layer1.connect(&hidden_layer2);
+    // hidden_layer2.connect(&output_layer);
+
+    // hidden_layer1.getData(input, output);
+    // hidden_layer1.training(30);
 }
