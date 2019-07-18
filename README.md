@@ -38,31 +38,23 @@ Two computers connect with socket and communicates in the way of <strong>Asynchr
 
 ## Level 2 : DL
 
+* HOW TO EXECUTE
+
+    go to tag : **<DL_nth_step>** (ex : DL_1st_step)
+    1. go to DL folder
+    2. g++ -o step(n) step(n).cpp (ex : g++ -o step1 step1.cpp)
+    3. ./step(n) (ex : ./step1)
+
 ### 1st step. Linear Regression
 Simple Linear Regression with neuron class
-
-* How to execute
-
-    go to tag : **<DL_1st_step>**
-    1. go to DL folder
-    2. g++ -o step1 step1.cpp
-    3. ./step1
 
 ### 2nd step. Multi Variable Linear Regression
 
 Multi Variable Linear Regression with neuron class
 
-* How to execute
-
-    same before step
-
 ### 3rd step. Basic Neural Network
 
 basic neural network(use softmax cross-entropy)
-
-* How to execute
-
-    same before step
 
 ### 4th step. MNIST(Basic Neural Network)
 
@@ -70,11 +62,9 @@ adapt basic neural network to mnist
 
 The correct solution was fitted with a probability of <strong>93%</strong>.
 
-* How to execute
+optimize : Mini-batch Gradient Descent(MGD)
 
-    same before step
-
-    you can change LEARNING_RATE, DATA_SET, batch_size
+you can change LEARNING_RATE, DATA_SET, batch_size
 
 ### 5th step. MNIST(Basic Multi Layer Neural Network)
 
@@ -84,9 +74,21 @@ The correct solution was fitted with a probability of <strong>92%</strong>.
 
 Hidden layer uses ReLU activation, output layer uses softmax activation.
 
-* How to execute
+initializer : Xavier(softmax), He(ReLU)
 
-    same before step
+optimize : Mini-batch Gradient Descent(MGD)
+
+### 6th step. MNIST(Advanced Multi Layer Neural Network)
+
+adapt advanced multi layer neural network to mnist
+
+The correct solution was fitted with a probability of <strong>92%</strong>.
+
+initializer : Xavier(softmax), He(ReLU)
+
+optimize : Adam
+
+([http://shuuki4.github.io/deep%20learning/2016/05/20/Gradient-Descent-Algorithm-Overview.html](http://shuuki4.github.io/deep%20learning/2016/05/20/Gradient-Descent-Algorithm-Overview.html))
 
 ## Level 3 : GPU
 ---
