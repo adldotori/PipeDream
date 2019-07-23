@@ -7,7 +7,7 @@ This repository is what I developed in AI lab.
 (Please compile in Linux instead of MAC OS X)
 
 
-## Level 1 : AIO
+## Level 1 : Asynchronous IO
 
 ### 1st step. Socket Programming
 Two computers connect with socket.
@@ -36,7 +36,7 @@ Two computers connect with socket and communicates in the way of <strong>Asynchr
     5. ./client <file\'s name> \<ip> \<port>
 
 
-## Level 2 : DL
+## Level 2 : Deep Learning
 
 * HOW TO EXECUTE
 
@@ -92,3 +92,7 @@ optimize : Adam
 
 ## Level 3 : GPU
 ---
+
+## Level 4 : Model Parallelism
+
+### 1st step. DL_5th_step & AIO
