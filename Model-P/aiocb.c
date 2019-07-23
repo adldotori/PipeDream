@@ -1,8 +1,8 @@
 #include "aiocb.h"
 
-struct aiocb * new_aiocb(int fd, char *buf, int cnt, int buf_size){
-    struct aiocb *my_aiocb = malloc(sizeof(struct aiocb));
-    bzero( (char *)my_aiocb, sizeof(struct aiocb) );
+struct aiocb * new_aiocb(int fd, double *buf, int cnt, int buf_size){
+    struct aiocb *my_aiocb = (struct aiocb *)malloc(sizeof(struct aiocb));
+    bzero( (double *)my_aiocb, sizeof(struct aiocb) );
 
     my_aiocb->aio_fildes     = fd;
     my_aiocb->aio_lio_opcode = LIO_READ; /* for lio_listio */
@@ -20,7 +20,7 @@ struct aiocb * new_aiocb(int fd, char *buf, int cnt, int buf_size){
 }
 
 void aio_handler(sigval_t sigval){
-    struct aiocb * my_aiocb = sigval.sival_ptr;
+    struct aiocb * my_aiocb = (struct aiocb *)sigval.sival_ptr;
     int fd = my_aiocb->aio_fildes,ret;
     if (aio_error( my_aiocb ) == 0) {
         int ret = aio_return( my_aiocb );
@@ -32,7 +32,7 @@ void aio_handler(sigval_t sigval){
 }
 
 struct sockaddr_in * new_server(char *ip, int port){
-    struct sockaddr_in * server = malloc(sizeof(struct sockaddr_in));
+    struct sockaddr_in * server = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
     bzero((char *)server, sizeof(struct sockaddr_in));
     server->sin_family = AF_INET;
     server->sin_port = htons(port);

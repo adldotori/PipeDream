@@ -244,20 +244,20 @@ private:
     
     void connNext(void)
     {
-        char ip[20];
-        int port;
+        char next_ip[20];
+        int next_port;
         while(true){
             cout << "Next Layer's ip : ";
-            cin >> ip;
+            cin >> next_ip;
             cout << "Next Layer's port : ";
-            cin >> port;
+            cin >> next_port;
             after_socket = socket(AF_INET, SOCK_STREAM, 0);
             if (after_socket == -1)
             {
                 printf("[-] socket ERROR\n");
                 continue;
             }
-            struct sockaddr_in * server = new_server(ip,port), client;
+            struct sockaddr_in * server = new_server(next_ip,next_port), client;
             if(connect(after_socket, (struct sockaddr *)server, sizeof(struct sockaddr_in)) == -1)
             {
                 printf("[-] connect() ERROR\n");
@@ -331,7 +331,7 @@ public:
 
             printf("[+] read aio\n");
             int cnt=0;
-            struct aiocb * ck = malloc(sizeof(struct aiocb));
+            struct aiocb * ck = (struct aiocb *)malloc(sizeof(struct aiocb));
             ck->aio_fildes = before_socket;
         
             while(cnt<FILESIZE/BUFSIZE){
@@ -350,7 +350,7 @@ public:
             // write(after_socket, output, sizeof(output));
             printf("[+] write aio\n");
             int cnt = 0;
-            struct aiocb * my_aiocb = new_aiocb(after_socket, output, 0, strlen(output));
+            struct aiocb * my_aiocb = new_aiocb(after_socket, output, 0, sizeof(output));
             int ret = aio_write(my_aiocb);
             if(ret < 0) perror("aio_write");
             while(my_aiocb->aio_fildes == after_socket){

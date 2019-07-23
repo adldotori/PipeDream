@@ -14,6 +14,6 @@
 #define FILESIZE 5000000
 //#define NOT_AIO
 
-struct aiocb * new_aiocb(int fd, char *buf,int cnt, int buf_size);
+struct aiocb * new_aiocb(int fd, double *buf,int cnt, int buf_size);
 void aio_handler(sigval_t sigval);
 struct sockaddr_in * new_server(char *ip, int port);

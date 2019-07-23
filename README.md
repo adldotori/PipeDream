@@ -33,7 +33,7 @@ Two computers connect with socket and communicates in the way of <strong>Asynchr
     2. gcc -o server server.c aiocb.c -lrt
     3. ./server \<ip> \<port>
     4. gcc -o client client.c aiocb.c -lrt
-    5. ./client <file\'s name> \<ip> \<port>
+    5. ./client <file name> \<ip> \<port>
 
 
 ## Level 2 : Deep Learning
@@ -96,3 +96,7 @@ optimize : Adam
 ## Level 4 : Model Parallelism
 
 ### 1st step. DL_5th_step & AIO
+
+* HOW TO EXECUTE
+
+g++ -o step1 step1.cpp aiocb.c -lrt
