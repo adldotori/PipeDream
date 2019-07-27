@@ -207,15 +207,28 @@ Hidden layer uses ReLU activation, output layer uses softmax activation.
 
 optimize : Mini-batch Gradient Descent(MGD)
 
-env : [learning_rate : 0.01, epoch : 15, batch_size : 100, layer : (784,256),(256,10)] 
+env : [epoch : 15, layer : (784,256),(256,10)] 
 
 Training data : mnist
 
-AILAB
+AILAB (learning_rate : 0.001, batch_size : 1)
 ```
+training 8
+COST : 0.0731284
+Correct Rate : 0.93985
+
+...
+
+training 14
+COST : 0.0813918
+Correct Rate : 0.934033
+
+training 15
+COST : 0.0881044
+Correct Rate : 0.931167
 ```
 
-DeepLearningZeroToAll : lab-10-2-mnist_nn.py
+DeepLearningZeroToAll : lab-10-2-mnist_nn.py (learning_rate : 0.01, batch_size : 100)
 ```
 Epoch: 0013 cost = 1.956830746
 Epoch: 0014 cost = 1.851161093
