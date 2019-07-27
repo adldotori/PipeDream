@@ -1,4 +1,4 @@
-// mnist(multi layer neural network)
+// mnist(multi layer neural network, multi com)
 #include <iostream>
 #include <algorithm>
 #include <limits.h>
@@ -98,7 +98,6 @@ private:
 
     void forwardProp(int batch)
     {
-	cout << "forward";
         for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
         {
             double *ret = new double[out];
@@ -131,7 +130,6 @@ private:
 
     void backwardProp(int batch)
     {
-	cout << "backward";
         for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
         {
             for (int j = 0; j < out; j++)
@@ -164,21 +162,22 @@ private:
     {
         if (before_socket == -1)
 	    return;
-	cout << "[+] read io" << endl;
+	// cout << "[+] read io" << endl;
 	int cnt=0, ret, rd_bytes=0;
-	while((ret=read(before_socket,input+batch*batch_size*in+(cnt++)*BUFSIZE,BUFSIZE)) > 0)
+	while(rd_bytes < batch_size * in * 8)
 	{
+	    ret = read(before_socket, input+batch*batch_size*in+(cnt++)*BUFSIZE,BUFSIZE);
 	    rd_bytes += ret;
-	    cout << cnt << " times read ... (" << rd_bytes << "bytes)" << endl;
+	    // cout << cnt << " times read ... (" << rd_bytes << "bytes)" << endl;
+	    if(ret == 0) break;
         }
-	cout << "end";
     }
 
     void send_after(int batch)
     {
         if (after_socket == -1)
             return;
-	cout << "[+] write io" << endl;
+	// cout << "[+] write io" << endl;
 	write(after_socket, predict + batch * batch_size * out, batch_size * out * 8);
     }
     
@@ -186,12 +185,14 @@ private:
     {
 	if(after_socket == -1)
 	    return;
-        cout << "[+] read io" << endl;
+        // cout << "[+] read io" << endl;
 	int cnt=0, ret, rd_bytes=0;
-	while((ret=read(after_socket, pre_pardiff+batch*batch_size*out+(cnt++)*BUFSIZE,BUFSIZE)) > 0)
+	while(rd_bytes < batch_size * out * 8)
 	{
+	    ret = read(after_socket, pre_pardiff+batch*batch_size*out+(cnt++)*BUFSIZE,BUFSIZE);
 	    rd_bytes += ret;
-	    cout << cnt << "times read ... (" << rd_bytes << "bytes)" << endl;
+	    // cout << cnt << "times read ... (" << rd_bytes << "bytes)" << endl;
+	    if(ret == 0) break;
 	}
     }
 
@@ -213,16 +214,17 @@ private:
                     case sigmoid:
                     case softmax:
                         post_pardiff[in_cnt_p] += pre_pardiff[out_cnt] * w[i][j] * input[in_cnt] * (1 - input[in_cnt]);
+			break;
                     case ReLU:
                         if(input[in_cnt]>0)
                             post_pardiff[in_cnt_p] += pre_pardiff[out_cnt] * w[i][j];
-                    }
+			break;
+                     }
                 }
             }
         }
-        cout << "[+] write io" << endl;
-	int buffer = max(BUFSIZE+10, batch_size * in);
-	write(before_socket, post_pardiff, buffer);
+        // cout << "[+] write io" << endl;
+	write(before_socket, post_pardiff, batch_size * in * 8);
         // TODO : send backward data(post_pardiff)
         // for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
         // {
@@ -392,8 +394,6 @@ public:
         }
         if(layer_type ==  Hidden) {
             printf("[+] write io\n");
-            for(int i=0;i<30;i++)
-		cout << output[i];
 	    write(after_socket, output, len * OUT_SIZE * 8);
             /*
  	    printf("[+] write aio\n");
@@ -475,7 +475,7 @@ void download(double *input[], double *output[])
 
 int main(int argc, char ** argv)
 {
-    int ch, count=30;
+    int ch, count=3;
     while ((ch = getopt(argc, argv, "i:p:l:")) != -1) 
     {
         switch (ch)
