@@ -12,8 +12,18 @@
 #include <sys/stat.h>
 #include <arpa/inet.h>
 #define FILESIZE 5000000
+#define CentOS 1
+#define ubuntu 2
+#define MacOS 3
+#define LINUX MacOS
 //#define NOT_AIO
 
 struct aiocb * new_aiocb(int fd, double *buf,int cnt, int buf_size);
+#if LINUX==CentOS
 void aio_handler(sigval_t sigval);
+#elif LINUX==ubuntu
+void aio_handler(__sigval_t sigval);
+#elif LINUX==MacOS
+void aio_handler(sigval sigval);
+#endif
 struct sockaddr_in * new_server(char *ip, int port);

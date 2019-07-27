@@ -19,7 +19,14 @@ struct aiocb * new_aiocb(int fd, double *buf, int cnt, int buf_size){
     return my_aiocb;
 }
 
-void aio_handler(sigval_t sigval){
+#if LINUX==CentOS
+void aio_handler(sigval_t sigval)
+#elif LINUX==ubuntu
+void aio_handler(__sigval_t sigval)
+#elif LINUX==MacOS
+void aio_handler(sigval sigval)
+#endif
+{
     struct aiocb * my_aiocb = (struct aiocb *)sigval.sival_ptr;
     int fd = my_aiocb->aio_fildes,ret;
     if (aio_error( my_aiocb ) == 0) {

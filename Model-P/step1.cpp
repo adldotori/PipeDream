@@ -14,7 +14,7 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
-#define LEARNING_RATE 0.0001
+#define LEARNING_RATE 0.001
 #define DATA_SET 60000
 #define BATCH_SIZE 100
 #define BUFSIZE 80000
@@ -233,7 +233,7 @@ private:
                     case ReLU:
                         if (input[in_cnt] > 0)
                             post_pardiff[in_cnt_p] += pre_pardiff[out_cnt] * w[i][j];
-                        sbreak;
+                        break;
                     }
                 }
             }
@@ -387,10 +387,13 @@ public:
             output = new double[len * OUT_SIZE];
             printf("[+] read io\n");
             int cnt = 0, ret, rd_bytes = 0;
-            while ((ret = read(before_socket, output + (cnt++) * BUFSIZE, BUFSIZE)) > 0)
+            while (rd_bytes < len * OUT_SIZE * 8)
             {
+                ret = read(before_socket, output + (cnt++) * BUFSIZE, BUFSIZE);
                 rd_bytes += ret;
-                printf("%d times read ... (%dbytes)\n", cnt, rd_bytes);
+                cout << cnt << " times read ... (" << rd_bytes << "bytes)" << endl;
+                if (ret <= 0)
+                    break;
             }
             /*
             printf("[+] read aio\n");
@@ -413,7 +416,9 @@ public:
         if (layer_type == Hidden)
         {
             printf("[+] write io\n");
-            write(after_socket, output, len * OUT_SIZE * 8);
+            for(int i=0; i < len/batch_size;i++){
+                write(after_socket, output + i*batch_size*OUT_SIZE*8, batch_size * OUT_SIZE * 8);
+            }
             /*
  	    printf("[+] write aio\n");
             int cnt = 0;
