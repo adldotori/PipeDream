@@ -40,7 +40,7 @@ enum layer_type
 
 char ip[20];
 int port;
-    
+
 class Layer
 {
 private:
@@ -73,11 +73,20 @@ private:
             }
             break;
         case softmax:
-            double sum = 0;
-            double * max = new double[out];
+            double sum = 0, avg = 0;
+            double *max = new double[out];
             for (int i = 0; i < out; i++)
             {
-                if(val[i] > 300) cout << val[i] << ' ' << output[k*out+i] << endl;
+                avg += val[i];
+            }
+            avg /= out;
+            for (int i = 0; i < out; i++)
+            {
+                val[i] = val[i] - avg;
+                if (val[i] < -300)
+                    val[i] = -300;
+                else if (val[i] > 300)
+                    val[i] = 300;
                 max[i] = exp(val[i]);
                 sum += max[i];
             }
@@ -91,7 +100,8 @@ private:
             }
             break;
         }
-        for (int i = 0; i < out; i++) {
+        for (int i = 0; i < out; i++)
+        {
             predict[k * out + i] = ret[i];
         }
     }
@@ -120,7 +130,7 @@ private:
         {
             for (int j = 0; j < out; j++)
             {
-                cost -= output[i * out + j] * log(predict[i * out + j]) - (1- output[i * out + j]) * log(1 - predict[i * out + j]);
+                cost -= output[i * out + j] * log(predict[i * out + j]) - (1 - output[i * out + j]) * log(1 - predict[i * out + j]);
             }
         }
         cost /= len;
@@ -161,15 +171,16 @@ private:
     void recv_before(int batch)
     {
         if (before_socket == -1)
-	    return;
-	// cout << "[+] read io" << endl;
-	int cnt=0, ret, rd_bytes=0;
-	while(rd_bytes < batch_size * in * 8)
-	{
-	    ret = read(before_socket, input+batch*batch_size*in+(cnt++)*BUFSIZE,BUFSIZE);
-	    rd_bytes += ret;
-	    // cout << cnt << " times read ... (" << rd_bytes << "bytes)" << endl;
-	    if(ret == 0) break;
+            return;
+        // cout << "[+] read io" << endl;
+        int cnt = 0, ret, rd_bytes = 0;
+        while (rd_bytes < batch_size * in * 8)
+        {
+            ret = read(before_socket, input + batch * batch_size * in + (cnt++) * BUFSIZE, BUFSIZE);
+            rd_bytes += ret;
+            // cout << cnt << " times read ... (" << rd_bytes << "bytes)" << endl;
+            if (ret == 0)
+                break;
         }
     }
 
@@ -177,54 +188,58 @@ private:
     {
         if (after_socket == -1)
             return;
-	// cout << "[+] write io" << endl;
-	write(after_socket, predict + batch * batch_size * out, batch_size * out * 8);
+        // cout << "[+] write io" << endl;
+        write(after_socket, predict + batch * batch_size * out, batch_size * out * 8);
     }
-    
+
     void recv_after(int batch)
     {
-	if(after_socket == -1)
-	    return;
+        if (after_socket == -1)
+            return;
         // cout << "[+] read io" << endl;
-	int cnt=0, ret, rd_bytes=0;
-	while(rd_bytes < batch_size * out * 8)
-	{
-	    ret = read(after_socket, pre_pardiff+batch*batch_size*out+(cnt++)*BUFSIZE,BUFSIZE);
-	    rd_bytes += ret;
-	    // cout << cnt << "times read ... (" << rd_bytes << "bytes)" << endl;
-	    if(ret == 0) break;
-	}
+        int cnt = 0, ret, rd_bytes = 0;
+        while (rd_bytes < batch_size * out * 8)
+        {
+            ret = read(after_socket, pre_pardiff + batch * batch_size * out + (cnt++) * BUFSIZE, BUFSIZE);
+            rd_bytes += ret;
+            // cout << cnt << "times read ... (" << rd_bytes << "bytes)" << endl;
+            if (ret == 0)
+                break;
+        }
     }
 
     void send_before(int batch)
     {
         if (before_socket == -1)
             return;
-        
-        double * post_pardiff =  new double[batch_size * in];
 
-        for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++) {
-            for (int i = 0; i < in; i++) {
-                for (int j = 0; j < out; j++) {
+        double *post_pardiff = new double[batch_size * in];
+
+        for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
+        {
+            for (int i = 0; i < in; i++)
+            {
+                for (int j = 0; j < out; j++)
+                {
                     int in_cnt = k * in + i;
                     int in_cnt_p = (k - batch * batch_size) * in + i;
-		    int out_cnt = k * out + j;
+                    int out_cnt = k * out + j;
                     switch (active)
                     {
                     case sigmoid:
                     case softmax:
                         post_pardiff[in_cnt_p] += pre_pardiff[out_cnt] * w[i][j] * input[in_cnt] * (1 - input[in_cnt]);
-			break;
+                        break;
                     case ReLU:
-                        if(input[in_cnt]>0)
+                        if (input[in_cnt] > 0)
                             post_pardiff[in_cnt_p] += pre_pardiff[out_cnt] * w[i][j];
-			break;
-                     }
+                        sbreak;
+                    }
                 }
             }
         }
         // cout << "[+] write io" << endl;
-	write(before_socket, post_pardiff, batch_size * in * 8);
+        write(before_socket, post_pardiff, batch_size * in * 8);
         // TODO : send backward data(post_pardiff)
         // for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
         // {
@@ -249,7 +264,7 @@ private:
 
         return v1 * s;
     }
-    
+
     void openPort(void)
     {
         int server_socket = socket(PF_INET, SOCK_STREAM, 0);
@@ -258,32 +273,33 @@ private:
             printf("[-] socket ERROR\n");
             exit(1);
         }
-        struct sockaddr_in * server = new_server(ip,port), client;
-        if(bind(server_socket, (struct sockaddr *)server, sizeof(struct sockaddr_in)) == -1)
+        struct sockaddr_in *server = new_server(ip, port), client;
+        if (bind(server_socket, (struct sockaddr *)server, sizeof(struct sockaddr_in)) == -1)
         {
             printf("[-] bind() ERROR\n");
             exit(1);
         }
-        if(listen(server_socket, 5) == -1)
+        if (listen(server_socket, 5) == -1)
         {
-            printf( "[-] listen() ERROR\n");
+            printf("[-] listen() ERROR\n");
             exit(1);
         }
         socklen_t client_size = sizeof(struct sockaddr_in);
-     	before_socket = accept(server_socket, (struct sockaddr *)&client, &client_size);
-        if(before_socket == -1)
+        before_socket = accept(server_socket, (struct sockaddr *)&client, &client_size);
+        if (before_socket == -1)
         {
-            printf( "[-] accept() ERROR\n");
+            printf("[-] accept() ERROR\n");
             exit(1);
         }
-        printf("[+] connect before_socket [%d]\n",before_socket);
+        printf("[+] connect before_socket [%d]\n", before_socket);
     }
-    
+
     void connNext(void)
     {
-	char next_ip[20] = "127.0.0.1";
+        char next_ip[20] = "127.0.0.1";
         int next_port = 9998;
-        while(1){
+        while (1)
+        {
             cout << "Next Layer's ip : ";
             cin >> next_ip;
             cout << "Next Layer's port : ";
@@ -294,13 +310,13 @@ private:
                 printf("[-] socket ERROR\n");
                 continue;
             }
-            struct sockaddr_in * server = new_server(next_ip,next_port), client;
-            if(connect(after_socket, (struct sockaddr *)server, sizeof(struct sockaddr_in)) == -1)
+            struct sockaddr_in *server = new_server(next_ip, next_port), client;
+            if (connect(after_socket, (struct sockaddr *)server, sizeof(struct sockaddr_in)) == -1)
             {
                 printf("[-] connect() ERROR\n");
                 continue;
             }
-            printf("[+] client after_socket [%d]\n",after_socket);
+            printf("[+] client after_socket [%d]\n", after_socket);
             break;
         }
         cout << "connect Completed!" << endl;
@@ -309,19 +325,19 @@ private:
 public:
     Layer(int in_, int out_, int len, enum active_mode active, enum layer_type layer_type)
     {
-	// initialization
+        // initialization
         srand(time(NULL));
         in = in_;
         out = out_;
         this->len = len;
-	input = new double[len * in];
-	output = NULL;
+        input = new double[len * in];
+        output = NULL;
         this->active = active;
         this->layer_type = layer_type;
-	before_socket = -1;
-	after_socket = -1;
+        before_socket = -1;
+        after_socket = -1;
         w = new double *[in];
-	srand(time(NULL));
+        srand(time(NULL));
         for (int i = 0; i < in; i++)
         {
             w[i] = new double[out];
@@ -348,33 +364,35 @@ public:
         batch_size = BATCH_SIZE;
         if (len < batch_size)
             batch_size = 1;
-	if(layer_type != Output) 
+        if (layer_type != Output)
             connNext();
-	if(in != 784)
-	{
-	    openPort();
-	    sendOutput();
-	}
+        if (in != 784)
+        {
+            openPort();
+            sendOutput();
+        }
     }
 
-    void getData(double * input, double * output)
+    void getData(double *input, double *output)
     {
         this->input = input;
         this->output = output;
-	sendOutput();
+        sendOutput();
     }
-    
+
     void sendOutput(void)
     {
-        if(output == NULL) {
-	    output = new double[len * OUT_SIZE];
+        if (output == NULL)
+        {
+            output = new double[len * OUT_SIZE];
             printf("[+] read io\n");
-            int cnt=0,ret,rd_bytes=0;
-            while((ret = read(before_socket,output+(cnt++)*BUFSIZE,BUFSIZE)) > 0){
-                 rd_bytes+=ret;
-                 printf("%d times read ... (%dbytes)\n",cnt,rd_bytes);
+            int cnt = 0, ret, rd_bytes = 0;
+            while ((ret = read(before_socket, output + (cnt++) * BUFSIZE, BUFSIZE)) > 0)
+            {
+                rd_bytes += ret;
+                printf("%d times read ... (%dbytes)\n", cnt, rd_bytes);
             }
-/*
+            /*
             printf("[+] read aio\n");
             int cnt=0;
             struct aiocb * ck = (struct aiocb *)malloc(sizeof(struct aiocb));
@@ -392,9 +410,10 @@ public:
             }
 */
         }
-        if(layer_type ==  Hidden) {
+        if (layer_type == Hidden)
+        {
             printf("[+] write io\n");
-	    write(after_socket, output, len * OUT_SIZE * 8);
+            write(after_socket, output, len * OUT_SIZE * 8);
             /*
  	    printf("[+] write aio\n");
             int cnt = 0;
@@ -416,19 +435,19 @@ public:
         send_after(batch);
         if (layer_type == Output)
         {
-            for(int i = batch * batch_size; i < (batch + 1) * batch_size; i++)
+            for (int i = batch * batch_size; i < (batch + 1) * batch_size; i++)
             {
-                for(int j = 0; j < out; j++)
+                for (int j = 0; j < out; j++)
                 {
                     int out_cnt = i * out + j;
                     pre_pardiff[out_cnt] = predict[out_cnt] - output[out_cnt];
                 }
             }
         }
-	recv_after(batch);
+        recv_after(batch);
         backwardProp(batch);
         send_before(batch);
-        if (layer_type == Output && batch == len / batch_size - 1) 
+        if (layer_type == Output && batch == len / batch_size - 1)
         {
             cout << "COST : " << cost() << endl;
             prediction();
@@ -440,7 +459,7 @@ public:
         for (int i = 0; i < step; i++)
         {
             cout << "training " << i + 1 << endl;
-            for(int j = 0; j < len / batch_size; j++)
+            for (int j = 0; j < len / batch_size; j++)
             {
                 batch_training(j);
             }
@@ -456,7 +475,7 @@ void download(double *input[], double *output[])
     if (ret)
     {
         cout << "An error occured: " << ret << endl;
-	exit(1);
+        exit(1);
     }
     int tmp = 0;
     for (int i = 0; i < DATA_SET; i++)
@@ -473,44 +492,44 @@ void download(double *input[], double *output[])
     return;
 }
 
-int main(int argc, char ** argv)
+int main(int argc, char **argv)
 {
-    int ch, count=3;
-    while ((ch = getopt(argc, argv, "i:p:l:")) != -1) 
+    int ch, count = 3;
+    while ((ch = getopt(argc, argv, "i:p:l:")) != -1)
     {
         switch (ch)
         {
-            case 'i':
-                strncpy(ip,optarg,strlen(optarg));
-                break;
-            case 'p':
-                port = atoi(optarg);
-                break;
-            case 'l':
-                if(!strcmp(optarg,"input"))
-                {
-                    double *input = new double[784 * DATA_SET];
-                    double *output = new double[10 * DATA_SET];
-                    download(&input, &output);
-                    Layer layer(784, 256, DATA_SET, ReLU, Hidden);
+        case 'i':
+            strncpy(ip, optarg, strlen(optarg));
+            break;
+        case 'p':
+            port = atoi(optarg);
+            break;
+        case 'l':
+            if (!strcmp(optarg, "input"))
+            {
+                double *input = new double[784 * DATA_SET];
+                double *output = new double[10 * DATA_SET];
+                download(&input, &output);
+                Layer layer(784, 256, DATA_SET, ReLU, Hidden);
 
-                    layer.getData(input, output);
-                    layer.training(count);
-                }
-		else if(!strcmp(optarg,"hidden"))
-		{
-		    Layer layer(256,256,DATA_SET, ReLU, Hidden);
-		    layer.training(count);
-		}	
-                else if(!strcmp(optarg,"output"))
-                {
-                    Layer layer(256, 10, DATA_SET, softmax, Output);
-		    layer.training(count);
-                }
-                else
-                {
-                    cout << "Only hidden, output can be -l option's argument." <<endl;
-                }
+                layer.getData(input, output);
+                layer.training(count);
+            }
+            else if (!strcmp(optarg, "hidden"))
+            {
+                Layer layer(256, 256, DATA_SET, ReLU, Hidden);
+                layer.training(count);
+            }
+            else if (!strcmp(optarg, "output"))
+            {
+                Layer layer(256, 10, DATA_SET, softmax, Output);
+                layer.training(count);
+            }
+            else
+            {
+                cout << "Only hidden, output can be -l option's argument." << endl;
+            }
         }
     }
 }
