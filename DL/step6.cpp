@@ -71,46 +71,34 @@ private:
             }
             break;
         case softmax:
-            double sum = 0;
+            double sum = 0, avg = 0;
             double * max = new double[out];
             for (int i = 0; i < out; i++)
             {
-                if(val[i] > 300) cout << val[i] << ' ' << output[k*out+i] << endl;
-                max[i] = exp(val[i]);
-                sum += max[i];
-                // cout << max[i] << ' ';
+                avg += val[i];
             }
-            // cout << sum << ' ';
+            avg /= out;
             for (int i = 0; i < out; i++)
             {
-                if(sum != 0) {
-                    ret[i] = max[i] / sum;
-                    if (ret[i] < exp(-30))
-                        ret[i] = exp(-30);
-                    if (ret[i] == 1)
-                        ret[i] = 1 - exp(-30);
-                }
-                else {
-                    cout << "ERROR";
-                    ret[i] = 0.1;
-                }
+                val[i] = val[i] - avg;
+                if(val[i] < -300) val[i] = -300;
+                else if(val[i] > 300) val[i] = 300;
+                max[i] = exp(val[i]);
+                sum += max[i];
+            }
+            for (int i = 0; i < out; i++)
+            {
+                ret[i] = max[i] / sum;
+                if (ret[i] < exp(-30))
+                    ret[i] = exp(-30);
+                if (ret[i] == 1)
+                    ret[i] = 1 - exp(-30);
             }
             break;
         }
-        // cout << k << ' ';
         for (int i = 0; i < out; i++) {
             predict[k * out + i] = ret[i];
-            // if(out == 10) {
-            //     cout << predict[k*out  +i] << ' ';
-            // }
         }
-        // for (int i = 0; i < out; i++) {
-        //     if(out == 10) {
-        //         cout << output[k*out  +i];
-        //     }
-        // }
-        // cout << endl;
-
     }
 
     void forwardProp(int batch)
@@ -175,15 +163,7 @@ private:
                 for (int i = 0; i < in; i++)
                 {
                     int in_cnt = k * in + i;
-                    if(i == 290 && j==0 && k==0) {
-                        cout << in << w[i][j] << ' ';
-                    }
                     w[i][j] -= (LEARNING_RATE / (sqrt(v_hat)+epsilon)) * m_hat * input[in_cnt];
-                    if(i == 290 && j==0 && k==0) {
-                        cout << w[i][j] << ' ';
-                        cout << (LEARNING_RATE / (sqrt(v_hat)+epsilon)) << ' ' << m_hat << ' ' << input[in_cnt] << endl;
-                        cout << pre_pardiff[out_cnt] << endl;
-                    }
                 }
                 b[j] -= (LEARNING_RATE / (sqrt(v_hat) + epsilon)) * m_hat;
             }
@@ -227,9 +207,11 @@ private:
                     case sigmoid:
                     case softmax:
                         post_pardiff[in_cnt] += pre_pardiff[out_cnt] * w[i][j] * input[in_cnt] * (1 - input[in_cnt]);
+                        break;
                     case ReLU:
                         if(input[in_cnt]>0)
                             post_pardiff[in_cnt] += pre_pardiff[out_cnt] * w[i][j];
+                        break;
                     }
                 }
             }
@@ -413,7 +395,7 @@ int main()
     hidden_layer.connect(&output_layer);
 
     hidden_layer.getData(input, output);
-    hidden_layer.training(30);
+    hidden_layer.training(15);
 
     // Layer hidden_layer1(784, 256, DATA_SET, ReLU, Hidden);
     // Layer hidden_layer2(256, 256, DATA_SET, ReLU, Hidden);

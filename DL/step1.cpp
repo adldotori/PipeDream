@@ -4,10 +4,10 @@
 #include <float.h>
 #define MAX(a,b) (a)>(b)?(a):(b)
 #define SQR(a) (a)*(a)
-#define LEARNING_RATE 0.05
+#define LEARNING_RATE 0.01
 #define DATA_CNT 100
 #define delta 0.00000001
-#define step 1000
+#define step 2000
 using namespace std;
 
 class Neuron {
@@ -61,13 +61,15 @@ public:
 int main(){
     Neuron my_neuron;
     
-    double input[] = {1,2,3,4,5};
-    double output[] = {4,7,10,13,16};
+    double input[] = {1,2,3};
+    double output[] = {1,2,3};
 
     my_neuron.getData(input,output,3);
     for(int i=0;i<step;i++){
-        cout<<"training "<<i<<endl;
         my_neuron.gradientDescent();
-        my_neuron.print();
+        if((i+1)%20 == 0) {
+            cout<<"training "<<i+1<<endl;
+            my_neuron.print();
+        }
     }
 }

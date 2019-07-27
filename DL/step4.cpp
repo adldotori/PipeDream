@@ -24,7 +24,7 @@ class Network
 {
 private:
     int in, out, len; // input node, output node, cnt of data
-    int batch_size = 10;
+    int batch_size;
     double **w, *b;
     double *input, *output; // data*in, data*out
     double **predict;
@@ -143,32 +143,13 @@ private:
 #endif
     }
 
-    void print(void)
-    {
-        // cout << "COST : " << getCost(test) << endl;
-        // cout << "WEIGHT, BIAS"<< endl;
-        // for(int i=0;i<out;i++){
-        //     cout << i << " : ";
-        //     for(int j=0;j<in;j++){
-        //         cout<< w[j][i] << " ";
-        //     }
-        //     cout << " | " << b[i] << endl;
-        // }
-    }
-
     void prediction(void)
     {
-        cout << "Prediction: " << endl;
         int correct = 0;
         for (int i = 0; i < len; i++)
         {
             int max = max_element(predict[i],predict[i]+out)-predict[i];
             if(output[i*out+max]==1) correct++;
-            // for (int j = 0; j < out; j++)
-            // {
-            //     cout << predict[i][j] << " ";
-            // }
-            // cout << endl;
         }
         cout << "Correct Rate : " << (double)correct/len << endl << endl;
     }
@@ -178,6 +159,7 @@ public:
     {
         in = in_;
         out = out_;
+        batch_size = 1;
         this->len = len;
         w = new double *[in];
         for (int i = 0; i < in; i++)
@@ -206,8 +188,8 @@ public:
         {
             cout << "training " << i + 1 << endl;
             cout << "cost : " << optimize() << endl;
-            prediction();
         }
+        prediction();
     }
 };
 
@@ -242,5 +224,5 @@ int main()
     Network net(784, 10, DATA_SET);
     
     net.getData(input, output);
-    net.training(30);
+    net.training(50);
 }

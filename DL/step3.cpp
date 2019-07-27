@@ -176,5 +176,5 @@ int main(){
         1,0,0,
         1,0,0};
     net.getData(input,output);
-    net.training(3000);
+    net.training(2000);
 }

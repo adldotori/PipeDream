@@ -12,9 +12,9 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
-#define LEARNING_RATE 0.0001
+#define LEARNING_RATE 0.001
 #define DATA_SET 60000
-#define BATCH_SIZE 100
+#define BATCH_SIZE 1
 using namespace std;
 
 enum mode
@@ -66,11 +66,18 @@ private:
             }
             break;
         case softmax:
-            double sum = 0;
+            double sum = 0, avg = 0;
             double * max = new double[out];
             for (int i = 0; i < out; i++)
             {
-                if(val[i] > 300) cout << val[i] << ' ' << output[k*out+i] << endl;
+                avg += val[i];
+            }
+            avg /= out;
+            for (int i = 0; i < out; i++)
+            {
+                val[i] = val[i] - avg;
+                if(val[i] < -300) val[i] = -300;
+                else if(val[i] > 300) val[i] = 300;
                 max[i] = exp(val[i]);
                 sum += max[i];
             }
@@ -96,6 +103,7 @@ private:
             double *ret = new double[out];
             for (int i = 0; i < out; i++)
             {
+                ret[i] = 0;
                 for (int j = 0; j < in; j++)
                 {
                     ret[i] += w[j][i] * input[k * in + j];
@@ -174,6 +182,7 @@ private:
                     case sigmoid:
                     case softmax:
                         post_pardiff[in_cnt] += pre_pardiff[out_cnt] * w[i][j] * input[in_cnt] * (1 - input[in_cnt]);
+                        break;
                     case ReLU:
                         if(input[in_cnt]>0)
                             post_pardiff[in_cnt] += pre_pardiff[out_cnt] * w[i][j];
@@ -354,7 +363,7 @@ int main()
     hidden_layer.connect(&output_layer);
 
     hidden_layer.getData(input, output);
-    hidden_layer.training(30);
+    hidden_layer.training(15);
 
     // Layer hidden_layer1(784, 256, DATA_SET, ReLU, Hidden);
     // Layer hidden_layer2(256, 256, DATA_SET, ReLU, Hidden);
