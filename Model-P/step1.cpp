@@ -14,9 +14,9 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
-#define LEARNING_RATE 0.001
-#define DATA_SET 60000
-#define BATCH_SIZE 100
+#define LEARNING_RATE 0.01
+#define DATA_SET 1000
+#define BATCH_SIZE 1
 #define BUFSIZE 80000
 #define OUT_SIZE 10
 using namespace std;
@@ -389,7 +389,7 @@ public:
             int cnt = 0, ret, rd_bytes = 0;
             while (rd_bytes < len * OUT_SIZE * 8)
             {
-                ret = read(before_socket, output + (cnt++) * BUFSIZE, BUFSIZE);
+                ret = read(before_socket, output + rd_bytes, BUFSIZE);
                 rd_bytes += ret;
                 cout << cnt << " times read ... (" << rd_bytes << "bytes)" << endl;
                 if (ret <= 0)
@@ -416,9 +416,7 @@ public:
         if (layer_type == Hidden)
         {
             printf("[+] write io\n");
-            for(int i=0; i < len/batch_size;i++){
-                write(after_socket, output + i*batch_size*OUT_SIZE*8, batch_size * OUT_SIZE * 8);
-            }
+            cout << write(after_socket, output, len * OUT_SIZE * 8) << endl;
             /*
  	    printf("[+] write aio\n");
             int cnt = 0;
