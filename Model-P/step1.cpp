@@ -14,7 +14,7 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
-#define LEARNING_RATE 0.01
+#define LEARNING_RATE 0.001
 #define DATA_SET 1000
 #define BATCH_SIZE 1
 #define BUFSIZE 80000
@@ -371,6 +371,12 @@ public:
             openPort();
             sendOutput();
         }
+    }
+    
+    ~Layer()
+    {
+	close(after_socket);
+	close(before_socket);
     }
 
     void getData(double *input, double *output)
