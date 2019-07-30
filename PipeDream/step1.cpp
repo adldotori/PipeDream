@@ -1,4 +1,4 @@
-// mnist(multi layer neural network, multi com)
+// multi computer
 #include <iostream>
 #include <algorithm>
 #include <limits.h>
@@ -15,7 +15,7 @@
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
 #define LEARNING_RATE 0.001
-#define DATA_SET 1000
+#define DATA_SET 60000
 #define BATCH_SIZE 1
 #define BUFSIZE 80000
 #define OUT_SIZE 10
@@ -401,6 +401,16 @@ public:
                 if (ret <= 0)
                     break;
             }
+            for(int i=0;i<rd_bytes/8;i++){
+                if(i%10==0) {
+                    if(output[i]==0 && output[i+1]==0 && output[i+2]==0 && output[i+3]==0 && output[i+4]==0 && output[i+5]==0 && output[i+6]==0 && output[i+7]==0 && output[i+8]==0 && output[i+9]==0)
+                        break;
+                        cout << endl;
+                        cout << i << ' ';
+                }
+                    cout << output[i];
+            }
+            cout << rd_bytes;
             /*
             printf("[+] read aio\n");
             int cnt=0;
