@@ -17,7 +17,7 @@
 #define LEARNING_RATE 0.001
 #define DATA_SET 60000
 #define BATCH_SIZE 1
-#define BUFSIZE 80000
+#define BUFSIZE 20000
 #define OUT_SIZE 10
 using namespace std;
 
@@ -172,13 +172,11 @@ private:
     {
         if (before_socket == -1)
             return;
-        // cout << "[+] read io" << endl;
         int cnt = 0, ret, rd_bytes = 0;
         while (rd_bytes < batch_size * in * 8)
         {
             ret = read(before_socket, input + batch * batch_size * in + (cnt++) * BUFSIZE, BUFSIZE);
             rd_bytes += ret;
-            // cout << cnt << " times read ... (" << rd_bytes << "bytes)" << endl;
             if (ret == 0)
                 break;
         }
@@ -188,7 +186,6 @@ private:
     {
         if (after_socket == -1)
             return;
-        // cout << "[+] write io" << endl;
         write(after_socket, predict + batch * batch_size * out, batch_size * out * 8);
     }
 
@@ -196,13 +193,11 @@ private:
     {
         if (after_socket == -1)
             return;
-        // cout << "[+] read io" << endl;
         int cnt = 0, ret, rd_bytes = 0;
         while (rd_bytes < batch_size * out * 8)
         {
             ret = read(after_socket, pre_pardiff + batch * batch_size * out + (cnt++) * BUFSIZE, BUFSIZE);
             rd_bytes += ret;
-            // cout << cnt << "times read ... (" << rd_bytes << "bytes)" << endl;
             if (ret == 0)
                 break;
         }
@@ -238,16 +233,7 @@ private:
                 }
             }
         }
-        // cout << "[+] write io" << endl;
         write(before_socket, post_pardiff, batch_size * in * 8);
-        // TODO : send backward data(post_pardiff)
-        // for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
-        // {
-        //     for (int i = 0; i < in; i++)
-        //     {
-        //         before->pre_pardiff[k * in + i] = post_pardiff[k * in + i];
-        //     }
-        // }
     }
 
     double gaussianRandom(void)
@@ -395,55 +381,15 @@ public:
             int cnt = 0, ret, rd_bytes = 0;
             while (rd_bytes < len * OUT_SIZE * 8)
             {
-                ret = read(before_socket, output + rd_bytes, BUFSIZE);
+                ret = read(before_socket, output + rd_bytes/8, BUFSIZE);
                 rd_bytes += ret;
-                cout << cnt << " times read ... (" << rd_bytes << "bytes)" << endl;
-                if (ret <= 0)
-                    break;
+                cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
             }
-            for(int i=0;i<rd_bytes/8;i++){
-                if(i%10==0) {
-                    if(output[i]==0 && output[i+1]==0 && output[i+2]==0 && output[i+3]==0 && output[i+4]==0 && output[i+5]==0 && output[i+6]==0 && output[i+7]==0 && output[i+8]==0 && output[i+9]==0)
-                        break;
-                        cout << endl;
-                        cout << i << ' ';
-                }
-                    cout << output[i];
-            }
-            cout << rd_bytes;
-            /*
-            printf("[+] read aio\n");
-            int cnt=0;
-            struct aiocb * ck = (struct aiocb *)malloc(sizeof(struct aiocb));
-            ck->aio_fildes = before_socket;
-        
-            while(cnt<FILESIZE/BUFSIZE){
-                struct aiocb * my_aiocb = new_aiocb(before_socket,output,cnt++, BUFSIZE);
-                int ret = aio_read(my_aiocb);
-                if(ret < 0) perror("aio_read");
-                ck = my_aiocb;
-            }
-            while(ck->aio_fildes == before_socket){
-                printf("waiting...\n");
-                sleep(1);
-            }
-*/
         }
         if (layer_type == Hidden)
         {
             printf("[+] write io\n");
             cout << write(after_socket, output, len * OUT_SIZE * 8) << endl;
-            /*
- 	    printf("[+] write aio\n");
-            int cnt = 0;
-            struct aiocb * my_aiocb = new_aiocb(after_socket, output, 0, sizeof(output));
-            int ret = aio_write(my_aiocb);
-            if(ret < 0) perror("aio_write");
-            while(my_aiocb->aio_fildes == after_socket){
-                printf("waiting...\n");
-                sleep(1);
-            }
- 	    */
         }
     }
 

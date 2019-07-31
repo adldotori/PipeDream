@@ -4,7 +4,7 @@ This repository is what I developed in AI lab.
 
 **GOAL : Parallel Training in PipeDream**
 
-(Please compile in Linux instead of MAC OS X)
+(Please compile in Linux)
 
 
 ## Level 1 : Asynchronous IO
@@ -269,9 +269,11 @@ Accuracy: 0.9659
 ## Level 3 : GPU
 ---
 
-## Level 4 : Model Parallelism
+## Level 4 : PipeDream
 
-### 1st step. DL_5th_step & AIO
+Modify linux type in aiocb.h (ex : #define LINUX MacOS)
+
+### 1st step. DL_5th_step & socket connection
 
 * HOW TO EXECUTE
 

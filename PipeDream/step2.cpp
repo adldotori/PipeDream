@@ -1,4 +1,4 @@
-// multi computer, aio
+// multi computer
 #include <iostream>
 #include <algorithm>
 #include <limits.h>
@@ -15,9 +15,9 @@
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
 #define LEARNING_RATE 0.001
-#define DATA_SET 1000
+#define DATA_SET 60000
 #define BATCH_SIZE 1
-#define BUFSIZE 80000
+#define BUFSIZE 20000
 #define OUT_SIZE 10
 using namespace std;
 
@@ -395,12 +395,20 @@ public:
             int cnt = 0, ret, rd_bytes = 0;
             while (rd_bytes < len * OUT_SIZE * 8)
             {
-                ret = read(before_socket, output + rd_bytes, BUFSIZE);
+                ret = read(before_socket, output + rd_bytes/8, BUFSIZE);
                 rd_bytes += ret;
-                cout << cnt << " times read ... (" << rd_bytes << "bytes)" << endl;
-                if (ret <= 0)
-                    break;
+                cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
             }
+            // for(int i=0;i<rd_bytes/8;i++){
+            //     if(i%10==0) {
+            //         if(output[i]==0 && output[i+1]==0 && output[i+2]==0 && output[i+3]==0 && output[i+4]==0 && output[i+5]==0 && output[i+6]==0 && output[i+7]==0 && output[i+8]==0 && output[i+9]==0)
+            //             break;
+            //             cout << endl;
+            //             cout << i << ' ';
+            //     }
+            //         cout << output[i];
+            // }
+            // cout << endl << rd_bytes;
             /*
             printf("[+] read aio\n");
             int cnt=0;
