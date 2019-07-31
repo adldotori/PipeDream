@@ -18,7 +18,7 @@
 #define LINUX MacOS
 //#define NOT_AIO
 
-struct aiocb * new_aiocb(int fd, double *buf,int cnt, int buf_size);
+struct aiocb * new_aiocb(int fd, double *buf, int buf_size);
 #if LINUX==CentOS
 void aio_handler(sigval_t sigval);
 #elif LINUX==ubuntu
