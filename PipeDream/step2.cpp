@@ -175,16 +175,13 @@ private:
         int cnt = 0, ret, rd_bytes = 0;
         while (rd_bytes < batch_size * in * 8)
         {
-            struct aiocb *my_aiocb = new_aiocb(before_socket, input + batch * batch_size * in + (cnt++) * BUFSIZE, BUFSIZE);
+            struct aiocb * my_aiocb = new_aiocb(before_socket, input + batch * batch_size * in + (cnt++) * BUFSIZE, BUFSIZE);
             ret = aio_read(my_aiocb);
             if (ret < 0)
                 perror("aio_read");
-            while (my_aiocb->aio_fildes == before_socket)
-            {
-                sleep(0.1);
-            }
-            rd_bytes += my_aiocb->aio_nbytes;
-            // cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
+            while (my_aiocb->aio_fildes == before_socket){cout << "waiting" << endl; usleep(1000000);}
+            rd_bytes += aio_return(my_aiocb);
+            cout << cnt << " times read ... (" << rd_bytes << "bytes)" << endl;
         }
     }
 
@@ -198,11 +195,8 @@ private:
         int ret = aio_write(my_aiocb);
         if (ret < 0)
             perror("aio_write");
-        while (my_aiocb->aio_fildes == after_socket)
-        {
-            printf("waiting...\n");
-            sleep(1);
-        }
+        while (my_aiocb->aio_fildes == after_socket){}
+	cout << "write : " << aio_return(my_aiocb) << endl;
     }
 
     void recv_after(int batch)
@@ -210,20 +204,20 @@ private:
         if (after_socket == -1)
             return;
         int cnt = 0, ret, rd_bytes = 0;
+	struct aiocb *my_aiocb = (struct aiocb *)malloc(sizeof(struct aiocb));
         while (rd_bytes < batch_size * out * 8)
         {
-            struct aiocb *my_aiocb = new_aiocb(after_socket, pre_pardiff + batch * batch_size * out + (cnt++) * BUFSIZE, BUFSIZE);
+            my_aiocb = new_aiocb(after_socket, pre_pardiff + batch * batch_size * out + (cnt++) * BUFSIZE, BUFSIZE);
             ret = aio_read(my_aiocb);
             if (ret < 0)
                 perror("aio_read");
-            while (my_aiocb->aio_fildes == after_socket)
-            {
-                sleep(0.1);
-            }
-            rd_bytes += my_aiocb->aio_nbytes;
+            while (my_aiocb->aio_fildes == after_socket){cout << "waiting" << endl; usleep(1000000);}
+            rd_bytes += aio_return(my_aiocb);
+	    cout << cnt << " times read ... (" << rd_bytes << "bytes)" << endl;
         }
+	while(my_aiocb->aio_fildes == after_socket){}
     }
-
+	
     void send_before(int batch)
     {
         if (before_socket == -1)
@@ -258,11 +252,8 @@ private:
         int ret = aio_write(my_aiocb);
         if (ret < 0)
             perror("aio_write");
-        while (my_aiocb->aio_fildes == before_socket)
-        {
-            printf("waiting...\n");
-            sleep(1);
-        }
+        while (my_aiocb->aio_fildes == before_socket){}
+	cout << "write : " << aio_return(my_aiocb) << endl;
     }
 
     double gaussianRandom(void)
@@ -415,9 +406,8 @@ public:
                     perror("aio_read");
                 while (my_aiocb->aio_fildes == before_socket)
                 {
-                    sleep(0.1);
                 }
-                rd_bytes += my_aiocb->aio_nbytes;
+                rd_bytes += aio_return(my_aiocb);
                 cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
             }
         }
@@ -430,13 +420,14 @@ public:
             while (my_aiocb->aio_fildes == after_socket)
             {
                 printf("waiting...\n");
-                sleep(1);
+		sleep(1);
             }
         }
     }
 
     void batch_training(int batch)
     {
+	cout << batch << endl;
         recv_before(batch);
         forwardProp(batch);
         send_after(batch);
