@@ -271,13 +271,21 @@ Accuracy: 0.9659
 
 ## Level 4 : PipeDream
 
-Modify linux type in aiocb.h (ex : #define LINUX MacOS)
+![FlowChart](./images/FlowChart.png)
 
-### 1st step. DL_5th_step & socket connection
+Modify linux type in aiocb.h (ex : #define LINUX ubuntu)
 
 * HOW TO EXECUTE
 
     1. g++ -o step1 step1.cpp aiocb.c -lrt
     2. ./step1 -i 127.0.0.1 -p 9999 -l output
     3. open other terminal, and ./step1 -i 127.0.0.1 -p 9998 -l input 
-    4. Then, this program will ask next layer's ip & port. Put 127.0.0.1, 9999 
+    4. Then, this program will ask next layer's ip & port. (Ex : 127.0.0.1, 9999)
+
+### 1st step. Model Parallelism(DL_5th_step & socket connection)
+
+
+### 2nd step. Model Parallelism(DL_5th_step & aio socket connection)
+
+
+### 3rd step. Pipeline Parallelism(DL_5th_step & aio socket connection)

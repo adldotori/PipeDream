@@ -168,7 +168,7 @@ private:
         cout << endl;
     }
 
-    void recv_before(int batch)
+    void recvBefore(int batch)
     {
         if (before_socket == -1)
             return;
@@ -182,14 +182,14 @@ private:
         }
     }
 
-    void send_after(int batch)
+    void sendAfter(int batch)
     {
         if (after_socket == -1)
             return;
         write(after_socket, predict + batch * batch_size * out, batch_size * out * 8);
     }
 
-    void recv_after(int batch)
+    void recvAfter(int batch)
     {
         if (after_socket == -1)
             return;
@@ -203,7 +203,7 @@ private:
         }
     }
 
-    void send_before(int batch)
+    void sendBefore(int batch)
     {
         if (before_socket == -1)
             return;
@@ -358,11 +358,11 @@ public:
             sendOutput();
         }
     }
-    
+
     ~Layer()
     {
-	close(after_socket);
-	close(before_socket);
+        close(after_socket);
+        close(before_socket);
     }
 
     void getData(double *input, double *output)
@@ -381,7 +381,7 @@ public:
             int cnt = 0, ret, rd_bytes = 0;
             while (rd_bytes < len * OUT_SIZE * 8)
             {
-                ret = read(before_socket, output + rd_bytes/8, BUFSIZE);
+                ret = read(before_socket, output + rd_bytes / 8, BUFSIZE);
                 rd_bytes += ret;
                 cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
             }
@@ -395,9 +395,9 @@ public:
 
     void batch_training(int batch)
     {
-        recv_before(batch);
+        recvBefore(batch);
         forwardProp(batch);
-        send_after(batch);
+        sendAfter(batch);
         if (layer_type == Output)
         {
             for (int i = batch * batch_size; i < (batch + 1) * batch_size; i++)
@@ -409,9 +409,9 @@ public:
                 }
             }
         }
-        recv_after(batch);
+        recvAfter(batch);
         backwardProp(batch);
-        send_before(batch);
+        sendBefore(batch);
         if (layer_type == Output && batch == len / batch_size - 1)
         {
             cout << "COST : " << cost() << endl;
