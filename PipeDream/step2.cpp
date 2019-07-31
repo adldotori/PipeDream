@@ -401,23 +401,18 @@ public:
             //     cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
             // }
 
-            // READ AIO
-            struct aiocb * ck = (struct aiocb *)malloc(sizeof(struct aiocb));
-            ck->aio_fildes = before_socket;
-        
+            // READ AIO        
             int cnt = 0, ret, rd_bytes = 0;
             while (rd_bytes < len * OUT_SIZE * 8)
             {
-                struct aiocb * my_aiocb = new_aiocb(before_socket,output + rd_bytes/8,cnt++, BUFSIZE);
+                struct aiocb * my_aiocb = new_aiocb(before_socket,output + rd_bytes/8, 0, BUFSIZE);
                 ret = aio_read(my_aiocb);
                 if(ret < 0) perror("aio_read");
-                ck = my_aiocb;
-                rd_bytes += ret;
+		while(my_aiocb->aio_fildes == before_socket){
+		    sleep(0.1);
+		}
+                rd_bytes += my_aiocb->aio_nbytes;
                 cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
-            }
-            while(ck->aio_fildes == before_socket){
-                printf("waiting...\n");
-                sleep(1);
             }
         }
         if (layer_type == Hidden)
@@ -432,8 +427,7 @@ public:
             while(my_aiocb->aio_fildes == after_socket){
                 printf("waiting...\n");
                 sleep(1);
-            }
- 	    
+            }    
         }
     }
 

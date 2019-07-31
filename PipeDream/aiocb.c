@@ -6,9 +6,9 @@ struct aiocb * new_aiocb(int fd, double *buf, int cnt, int buf_size){
 
     my_aiocb->aio_fildes     = fd;
     my_aiocb->aio_lio_opcode = LIO_READ; /* for lio_listio */
-    my_aiocb->aio_buf        = buf+cnt*buf_size;
+    my_aiocb->aio_buf        = buf;
     my_aiocb->aio_nbytes     = buf_size;
-    my_aiocb->aio_offset     = cnt*buf_size;
+    my_aiocb->aio_offset     = 0;
 
     my_aiocb->aio_sigevent.sigev_notify            = SIGEV_THREAD;
     my_aiocb->aio_sigevent.sigev_signo             = 0;
@@ -28,13 +28,16 @@ void aio_handler(sigval sigval)
 #endif
 {
     struct aiocb * my_aiocb = (struct aiocb *)sigval.sival_ptr;
-    int fd = my_aiocb->aio_fildes,ret;
+    int fd = my_aiocb->aio_fildes;
     if (aio_error( my_aiocb ) == 0) {
         int ret = aio_return( my_aiocb );
         printf("[+] %3dth aiocb's response [size: %5dbytes]\n",(int)(my_aiocb->aio_offset/my_aiocb->aio_nbytes)+1, ret);
-        my_aiocb->aio_fildes = -1;
+        my_aiocb->aio_fildes = 0;
     }
-    else perror("aio_handler");
+    else {
+	perror("aio_handler");
+	my_aiocb->aio_fildes = -1;
+    }
     return;
 }
 
