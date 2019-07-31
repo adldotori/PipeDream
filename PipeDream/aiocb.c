@@ -31,8 +31,6 @@ void aio_handler(sigval sigval)
     int fd = my_aiocb->aio_fildes;
     if (aio_error( my_aiocb ) == 0) {
         int ret = aio_return( my_aiocb );
-	    printf("%f ", *((double *)my_aiocb->aio_buf+0));
-        // printf("[+] %3dth aiocb's response [size: %5dbytes]\n",(int)(my_aiocb->aio_offset/my_aiocb->aio_nbytes)+1, ret);
         my_aiocb->aio_fildes = 0;
     }
     else {
