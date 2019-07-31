@@ -172,15 +172,19 @@ private:
     {
         if (before_socket == -1)
             return;
-        // cout << "[+] read io" << endl;
         int cnt = 0, ret, rd_bytes = 0;
         while (rd_bytes < batch_size * in * 8)
         {
-            ret = read(before_socket, input + batch * batch_size * in + (cnt++) * BUFSIZE, BUFSIZE);
-            rd_bytes += ret;
-            // cout << cnt << " times read ... (" << rd_bytes << "bytes)" << endl;
-            if (ret == 0)
-                break;
+            struct aiocb *my_aiocb = new_aiocb(before_socket, input + batch * batch_size * in + (cnt++) * BUFSIZE, BUFSIZE);
+            ret = aio_read(my_aiocb);
+            if (ret < 0)
+                perror("aio_read");
+            while (my_aiocb->aio_fildes == before_socket)
+            {
+                sleep(0.1);
+            }
+            rd_bytes += my_aiocb->aio_nbytes;
+            // cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
         }
     }
 
@@ -190,21 +194,33 @@ private:
             return;
         // cout << "[+] write io" << endl;
         write(after_socket, predict + batch * batch_size * out, batch_size * out * 8);
+        struct aiocb *my_aiocb = new_aiocb(after_socket, predict + batch * batch_size * out, batch_size * out * 8);
+        int ret = aio_write(my_aiocb);
+        if (ret < 0)
+            perror("aio_write");
+        while (my_aiocb->aio_fildes == after_socket)
+        {
+            printf("waiting...\n");
+            sleep(1);
+        }
     }
 
     void recv_after(int batch)
     {
         if (after_socket == -1)
             return;
-        // cout << "[+] read io" << endl;
         int cnt = 0, ret, rd_bytes = 0;
         while (rd_bytes < batch_size * out * 8)
         {
-            ret = read(after_socket, pre_pardiff + batch * batch_size * out + (cnt++) * BUFSIZE, BUFSIZE);
-            rd_bytes += ret;
-            // cout << cnt << "times read ... (" << rd_bytes << "bytes)" << endl;
-            if (ret == 0)
-                break;
+            struct aiocb *my_aiocb = new_aiocb(after_socket, pre_pardiff + batch * batch_size * out + (cnt++) * BUFSIZE, BUFSIZE);
+            ret = aio_read(my_aiocb);
+            if (ret < 0)
+                perror("aio_read");
+            while (my_aiocb->aio_fildes == after_socket)
+            {
+                sleep(0.1);
+            }
+            rd_bytes += my_aiocb->aio_nbytes;
         }
     }
 
@@ -238,16 +254,15 @@ private:
                 }
             }
         }
-        // cout << "[+] write io" << endl;
-        write(before_socket, post_pardiff, batch_size * in * 8);
-        // TODO : send backward data(post_pardiff)
-        // for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
-        // {
-        //     for (int i = 0; i < in; i++)
-        //     {
-        //         before->pre_pardiff[k * in + i] = post_pardiff[k * in + i];
-        //     }
-        // }
+        struct aiocb *my_aiocb = new_aiocb(before_socket, post_pardiff, batch_size * in * 8);
+        int ret = aio_write(my_aiocb);
+        if (ret < 0)
+            perror("aio_write");
+        while (my_aiocb->aio_fildes == before_socket)
+        {
+            printf("waiting...\n");
+            sleep(1);
+        }
     }
 
     double gaussianRandom(void)
@@ -372,11 +387,11 @@ public:
             sendOutput();
         }
     }
-    
+
     ~Layer()
     {
-	close(after_socket);
-	close(before_socket);
+        close(after_socket);
+        close(before_socket);
     }
 
     void getData(double *input, double *output)
@@ -391,43 +406,32 @@ public:
         if (output == NULL)
         {
             output = new double[len * OUT_SIZE];
-
-            // READ IO
-            // int cnt = 0, ret, rd_bytes = 0;
-            // while (rd_bytes < len * OUT_SIZE * 8)
-            // {
-            //     ret = read(before_socket, output + rd_bytes/8, BUFSIZE);
-            //     rd_bytes += ret;
-            //     cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
-            // }
-
-            // READ AIO        
             int cnt = 0, ret, rd_bytes = 0;
             while (rd_bytes < len * OUT_SIZE * 8)
             {
-                struct aiocb * my_aiocb = new_aiocb(before_socket,output + rd_bytes/8, 0, BUFSIZE);
+                struct aiocb *my_aiocb = new_aiocb(before_socket, output + rd_bytes / 8, BUFSIZE);
                 ret = aio_read(my_aiocb);
-                if(ret < 0) perror("aio_read");
-		while(my_aiocb->aio_fildes == before_socket){
-		    sleep(0.1);
-		}
+                if (ret < 0)
+                    perror("aio_read");
+                while (my_aiocb->aio_fildes == before_socket)
+                {
+                    sleep(0.1);
+                }
                 rd_bytes += my_aiocb->aio_nbytes;
                 cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
             }
         }
         if (layer_type == Hidden)
         {
-            // WRITE IO
-            // cout << write(after_socket, output, len * OUT_SIZE * 8) << endl;
-            
-            // WRITE AIO
-            struct aiocb * my_aiocb = new_aiocb(after_socket, output, 0, len * OUT_SIZE * 8);
+            struct aiocb *my_aiocb = new_aiocb(after_socket, output, len * OUT_SIZE * 8);
             int ret = aio_write(my_aiocb);
-            if(ret < 0) perror("aio_write");
-            while(my_aiocb->aio_fildes == after_socket){
+            if (ret < 0)
+                perror("aio_write");
+            while (my_aiocb->aio_fildes == after_socket)
+            {
                 printf("waiting...\n");
                 sleep(1);
-            }    
+            }
         }
     }
 

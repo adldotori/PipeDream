@@ -1,6 +1,6 @@
 #include "aiocb.h"
 
-struct aiocb * new_aiocb(int fd, double *buf, int cnt, int buf_size){
+struct aiocb * new_aiocb(int fd, double *buf, int buf_size){
     struct aiocb *my_aiocb = (struct aiocb *)malloc(sizeof(struct aiocb));
     bzero( (double *)my_aiocb, sizeof(struct aiocb) );
 
