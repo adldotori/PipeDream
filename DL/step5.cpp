@@ -67,7 +67,7 @@ private:
             break;
         case softmax:
             double sum = 0, avg = 0;
-            double * max = new double[out];
+            double *max = new double[out];
             for (int i = 0; i < out; i++)
             {
                 avg += val[i];
@@ -76,8 +76,10 @@ private:
             for (int i = 0; i < out; i++)
             {
                 val[i] = val[i] - avg;
-                if(val[i] < -300) val[i] = -300;
-                else if(val[i] > 300) val[i] = 300;
+                if (val[i] < -300)
+                    val[i] = -300;
+                else if (val[i] > 300)
+                    val[i] = 300;
                 max[i] = exp(val[i]);
                 sum += max[i];
             }
@@ -91,7 +93,8 @@ private:
             }
             break;
         }
-        for (int i = 0; i < out; i++) {
+        for (int i = 0; i < out; i++)
+        {
             predict[k * out + i] = ret[i];
         }
     }
@@ -121,7 +124,7 @@ private:
         {
             for (int j = 0; j < out; j++)
             {
-                cost -= output[i * out + j] * log(predict[i * out + j]) - (1- output[i * out + j]) * log(1 - predict[i * out + j]);
+                cost -= output[i * out + j] * log(predict[i * out + j]) - (1 - output[i * out + j]) * log(1 - predict[i * out + j]);
             }
         }
         cost /= len;
@@ -169,12 +172,18 @@ private:
     {
         if (before == NULL)
             return;
-        
-        double * post_pardiff =  new double[len * in];
 
-        for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++) {
-            for (int i = 0; i < in; i++) {
-                for (int j = 0; j < out; j++) {
+        double *post_pardiff = new double[len * in];
+        for (int i = 0; i < len * in; i++)
+        {
+            post_pardiff[i] = 0;
+        }
+        for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
+        {
+            for (int i = 0; i < in; i++)
+            {
+                for (int j = 0; j < out; j++)
+                {
                     int in_cnt = k * in + i;
                     int out_cnt = k * out + j;
                     switch (active)
@@ -184,13 +193,14 @@ private:
                         post_pardiff[in_cnt] += pre_pardiff[out_cnt] * w[i][j] * input[in_cnt] * (1 - input[in_cnt]);
                         break;
                     case ReLU:
-                        if(input[in_cnt]>0)
+                        if (input[in_cnt] > 0)
                             post_pardiff[in_cnt] += pre_pardiff[out_cnt] * w[i][j];
                     }
                 }
             }
         }
-        if(batch == 0) {
+        if (batch == 0)
+        {
             before->pre_pardiff = new double[len * in];
         }
         for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
@@ -262,7 +272,7 @@ public:
 
     void connect(Layer *other)
     {
-        if(other->in != this->out) 
+        if (other->in != this->out)
         {
             cout << "It's impossible because the number of layer's node is different." << endl;
             exit(1);
@@ -274,10 +284,12 @@ public:
     void getData(double *input, double *output)
     {
         this->input = input;
-        if(after!=NULL) {
-            after->getData(predict,output);
+        if (after != NULL)
+        {
+            after->getData(predict, output);
         }
-        else {
+        else
+        {
             this->output = output;
         }
     }
@@ -291,9 +303,9 @@ public:
         if (layer_type == Output)
         {
             pre_pardiff = new double[len * out];
-            for(int i = batch * batch_size; i < (batch + 1) * batch_size; i++)
+            for (int i = batch * batch_size; i < (batch + 1) * batch_size; i++)
             {
-                for(int j = 0; j < out; j++)
+                for (int j = 0; j < out; j++)
                 {
                     int out_cnt = i * out + j;
                     pre_pardiff[out_cnt] = predict[out_cnt] - output[out_cnt];
@@ -302,7 +314,7 @@ public:
         }
         backwardProp(batch);
         send_before(batch);
-        if (layer_type == Output && batch == len / batch_size - 1) 
+        if (layer_type == Output && batch == len / batch_size - 1)
         {
             cout << "COST : " << cost() << endl;
             prediction();
@@ -314,7 +326,7 @@ public:
         for (int i = 0; i < step; i++)
         {
             cout << "training " << i + 1 << endl;
-            for(int j = 0; j < len / batch_size; j++)
+            for (int j = 0; j < len / batch_size; j++)
             {
                 batch_training(j);
             }
@@ -352,7 +364,6 @@ int main()
     double *output = new double[10 * DATA_SET];
     download(&input, &output);
 
-    
     // Layer output_layer(784, 10, DATA_SET, softmax, Output);
 
     // output_layer.getData(input, output);
