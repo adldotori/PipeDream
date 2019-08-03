@@ -16,8 +16,9 @@
 #define beta2 0.999
 #define epsilon 0.00000001
 #define optimize 2
-#define LEARNING_RATE 0.0001
-#define DATA_SET 60000
+#define LEARNING_RATE 0.001
+#define DATA_SET 1000
+#define TEST_DATA_SET 10000
 #define BATCH_SIZE 1
 using namespace std;
 
@@ -44,7 +45,7 @@ private:
     int in, out, len; // input node, output node, cnt of data
     int batch_size;
     double **w, *b;
-    double *m, *v;          // adam variable
+    double *m, *v, *b_m, *b_v;          // adam variable
     double *input, *output; // data*in, data*out
     double *predict;
     double *pre_pardiff;
@@ -157,22 +158,25 @@ private:
 #elif optimize == 2 // Adaptive Moment Estimation(Adam)
         for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
         {
+            int step_cnt = step * len + k + 1;
             for (int j = 0; j < out; j++)
             {
                 int out_cnt = k * out + j;
-                double m_hat, v_hat;
                 for (int i = 0; i < in; i++)
                 {
                     int in_cnt = k * in + i;
-                    m[out_cnt] = beta1 * m[out_cnt] + (1 - beta1) * pre_pardiff[out_cnt];
-                    v[out_cnt] = beta2 * v[out_cnt] + (1 - beta2) * pre_pardiff[out_cnt] * pre_pardiff[out_cnt];
-                    m_hat = m[out_cnt] / (1 - pow(beta1, step * in + i + 1));
-                    v_hat = v[out_cnt] / (1 - pow(beta2, step * in + i + 1));
-                    w[i][j] -= (LEARNING_RATE / (sqrt(v_hat) + epsilon)) * m_hat * input[in_cnt];
-                    // w[i][j] -= LEARNING_RATE * (1 - correct_rate) * pre_pardiff[out_cnt] * input[in_cnt];
+                    int mv_cnt = i * out + j;
+                    // if(mv_cnt == 123) cout << pre_pardiff[out_cnt] << ' ' << input[in_cnt] << endl;
+                    m[mv_cnt] = beta1 * m[mv_cnt] + (1 - beta1) * pre_pardiff[out_cnt] * input[in_cnt];
+                    v[mv_cnt] = beta2 * v[mv_cnt] + (1 - beta2) * pre_pardiff[out_cnt] * pre_pardiff[out_cnt] * input[in_cnt] * input[in_cnt];
+                    // if(i == 510) cout << j << ' ' <<step_cnt << ' ' << pre_pardiff[out_cnt] * pre_pardiff[out_cnt] * input[in_cnt] * input[in_cnt] << endl;
+                    // if(mv_cnt == 123) cout << m[mv_cnt] << ' ' << v[mv_cnt] << ' ' << (LEARNING_RATE * sqrt(1-pow(beta2, step_cnt)) / (1-pow(beta1, step_cnt))) * m[mv_cnt] / (sqrt(v[mv_cnt]) + epsilon) << endl;
+                    if((LEARNING_RATE * sqrt(1-pow(beta2, step_cnt)) / (1-pow(beta1, step_cnt))) * m[mv_cnt] / (sqrt(v[mv_cnt]) + epsilon)>1)cout << step_cnt << ' ' << i << ' '<<j<<' '<<(LEARNING_RATE * sqrt(1-pow(beta2, step_cnt)) / (1-pow(beta1, step_cnt))) * m[mv_cnt] / (sqrt(v[mv_cnt]) + epsilon) << ' ' << m[mv_cnt] << ' ' << v[mv_cnt] << endl;
+                    w[i][j] -= LEARNING_RATE * (sqrt(1-pow(beta2, step_cnt)) / (1-pow(beta1, step_cnt))) * m[mv_cnt] / (sqrt(v[mv_cnt] + epsilon));
                 }
-                b[j] -= (LEARNING_RATE / (sqrt(v_hat) + epsilon)) * m_hat;
-                // b[j] -= LEARNING_RATE * (1 - correct_rate) * pre_pardiff[out_cnt];
+                b_m[j] = beta1 * b_m[j] + (1 - beta1) * pre_pardiff[out_cnt];
+                b_v[j] = beta2 * b_v[j] + (1 - beta2) * pre_pardiff[out_cnt] * pre_pardiff[out_cnt];
+                b[j] -= LEARNING_RATE * (sqrt(1-pow(beta2, step_cnt)) / (1-pow(beta1, step_cnt))) * b_m[j] / (sqrt(b_v[j]) + epsilon);
             }
         }
 #endif
@@ -262,14 +266,13 @@ public:
     Layer(int in_, int out_, int len, enum active_mode active, enum layer_type layer_type)
     {
         // initialization
-        srand(time(NULL));
         in = in_;
         out = out_;
         this->len = len;
         this->active = active;
         this->layer_type = layer_type;
-        w = new double *[in];
         srand(time(NULL));
+        w = new double *[in];
         for (int i = 0; i < in; i++)
         {
             w[i] = new double[out];
@@ -288,15 +291,21 @@ public:
                 }
             }
         }
-        b = new double[out];
-        m = new double[len * out];
-        v = new double[len * out];
-        for (int i = 0; i < out; i++)
-            b[i] = 0;
-        for (int i = 0; i < len * out; i++)
+        m = new double[in * out];
+        v = new double[in * out];
+        for (int i = 0; i < in * out; i++)
         {
             m[i] = 0;
             v[i] = 0;
+        }
+        b = new double[out];
+        b_m = new double[out];
+        b_v = new double[out];
+        for (int i = 0; i < out; i++)
+        {
+            b[i] = 0;
+            b_m[i] = 0;
+            b_v[i] = 0;
         }
         predict = new double[len * out];
         before = NULL;
@@ -345,7 +354,6 @@ public:
                 {
                     int out_cnt = i * out + j;
                     pre_pardiff[out_cnt] = predict[out_cnt] - output[out_cnt];
-                    if(out_cnt == 3) cout << "PRE" << pre_pardiff[out_cnt] << ' ' << predict[out_cnt] << ' ' << output[out_cnt] << endl;
                 }
             }
         }
@@ -367,6 +375,21 @@ public:
             {
                 batch_training(j, i);
             }
+        }
+    }
+
+    void test(void)
+    {
+        cout << "TEST" << endl;
+        len = TEST_DATA_SET;
+        batch_size = len;
+        forwardProp(0);
+        send_after(0);
+        if (after != NULL)
+            after->test();
+        if (layer_type == Output)
+        {
+            prediction();
         }
     }
 };
@@ -395,11 +418,38 @@ void download(double *input[], double *output[])
     return;
 }
 
+void download_test(double *input[], double *output[])
+{
+    unsigned int cnt;
+    mnist_data *data;
+    int ret = mnist_load("t10k-images-idx3-ubyte", "t10k-labels-idx1-ubyte", &data, &cnt);
+    if (ret)
+    {
+        cout << "An error occured: " << ret << endl;
+    }
+    int tmp = 0;
+    for (int i = 0; i < TEST_DATA_SET; i++)
+    {
+        for (int j = 0; j < 28; j++)
+        {
+            for (int k = 0; k < 28; k++)
+            {
+                *(*input + tmp++) = data[i].data[j][k];
+            }
+        }
+        *(*output + i * 10 + data[i].label) = 1;
+    }
+    return;
+}
+
 int main()
 {
     double *input = new double[784 * DATA_SET];
     double *output = new double[10 * DATA_SET];
+    double *test_input = new double[784 * TEST_DATA_SET];
+    double *test_output = new double[10 * TEST_DATA_SET];
     download(&input, &output);
+    download_test(&test_input, &test_output);
 
     // Layer output_layer(784, 10, DATA_SET, softmax, Output);
 
@@ -421,4 +471,7 @@ int main()
 
     // hidden_layer1.getData(input, output);
     // hidden_layer1.training(30);
+
+    // output_layer.getData(test_input, test_output);
+    // output_layer.test();
 }
