@@ -15,9 +15,9 @@
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
 #define LEARNING_RATE 0.001
-#define DATA_SET 60000
-#define BATCH_SIZE 100
-#define BUFSIZE 20000
+#define DATA_SET 500
+#define BATCH_SIZE 10
+#define BUFSIZE 1000
 #define OUT_SIZE 10
 using namespace std;
 
@@ -184,9 +184,22 @@ private:
 
     void sendAfter(int batch)
     {
+	cout << "send";
         if (after_socket == -1)
             return;
-        write(after_socket, predict + batch * batch_size * out, batch_size * out * 8);
+        int rd_bytes = 0,ret;
+	while(rd_bytes < batch_size * out * 8){
+	    if(rd_bytes > batch_size * out * 8 - BUFSIZE) {
+		ret = write(after_socket, predict + batch * batch_size * out + rd_bytes/8, batch_size*out*8-rd_bytes);
+	    }
+	    else {
+	        ret = write(after_socket, predict + batch * batch_size * out + rd_bytes/8, BUFSIZE);
+	    }
+	    rd_bytes += ret;
+	    cout << rd_bytes << endl;
+	    if(ret <= 0)
+		break;
+	}
     }
 
     void recvAfter(int batch)
@@ -460,7 +473,7 @@ void download(double *input[], double *output[])
 
 int main(int argc, char **argv)
 {
-    int ch, count = 3;
+    int ch, count = 1;
     while ((ch = getopt(argc, argv, "i:p:l:")) != -1)
     {
         switch (ch)
