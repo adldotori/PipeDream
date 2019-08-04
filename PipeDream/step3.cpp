@@ -38,8 +38,8 @@ enum layer_type
     Output
 };
 
-char ip[20] = "127.0.0.1";
-int port = 1597;
+char ip[20];
+int port;
 
 class Layer
 {
@@ -493,10 +493,13 @@ void download(double *input[], double *output[])
 int main(int argc, char **argv)
 {
     int ch, count = 30;
-    while ((ch = getopt(argc, argv, "p:l:")) != -1)
+    while ((ch = getopt(argc, argv, "i:p:l:")) != -1)
     {
         switch (ch)
         {
+        case 'i':
+            strncpy(ip, optarg, strlen(optarg));
+            break;
         case 'p':
             port = atoi(optarg);
             break;

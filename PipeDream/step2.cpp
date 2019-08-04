@@ -38,8 +38,8 @@ enum layer_type
     Output
 };
 
-char ip[20] = "127.0.0.1";
-int port = 1597;
+char ip[20];
+int port;
 
 class Layer
 {
@@ -306,10 +306,10 @@ private:
         int next_port = 9998;
         while (1)
         {
-            cout << "Next Layer's ip : ";
-            cin >> next_ip;
-            cout << "Next Layer's port : ";
-            cin >> next_port;
+            // cout << "Next Layer's ip : ";
+            // cin >> next_ip;
+            // cout << "Next Layer's port : ";
+            // cin >> next_port;
             after_socket = socket(AF_INET, SOCK_STREAM, 0);
             if (after_socket == -1)
             {
@@ -493,10 +493,13 @@ void download(double *input[], double *output[])
 int main(int argc, char **argv)
 {
     int ch, count = 30;
-    while ((ch = getopt(argc, argv, "p:l:")) != -1)
+    while ((ch = getopt(argc, argv, "i:p:l:")) != -1)
     {
         switch (ch)
         {
+        case 'i':
+            strncpy(ip, optarg, strlen(optarg));
+            break;
         case 'p':
             port = atoi(optarg);
             break;
