@@ -15,5 +15,14 @@
 #define BUFSIZE 1000
 
 int main(){
-    printf("%f",pow(2.0,0.5)); 
+    // clock_t start,end;
+    
+    // start = clock();
+    // for(int i=0;i<10000;i++){
+    //     printf("%f",pow(0.9999,100000000));
+    // }
+    // end = clock();
+    // printf("\ntime: %f",1000*(float)(end - start)/CLOCKS_PER_SEC);
+    for(int i=0;i<1000;i++)
+        printf("%f\n",sqrt(1-pow(0.999, i)) / (1-pow(0.9, i)));
 }
