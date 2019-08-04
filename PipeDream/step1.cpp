@@ -15,9 +15,9 @@
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
 #define LEARNING_RATE 0.001
-#define DATA_SET 60000
-#define BATCH_SIZE 100
-#define BUFSIZE 20000
+#define DATA_SET 500
+#define BATCH_SIZE 10
+#define BUFSIZE 1000
 #define OUT_SIZE 10
 using namespace std;
 
@@ -173,13 +173,17 @@ private:
         if (before_socket == -1)
             return;
         int cnt = 0, ret, rd_bytes = 0;
+	cout << batch_size * in * 8;
         while (rd_bytes < batch_size * in * 8)
         {
             ret = read(before_socket, input + batch * batch_size * in + (cnt++) * BUFSIZE, BUFSIZE);
             rd_bytes += ret;
-            if (ret == 0)
+	    cout << rd_bytes << ' ';
+            if (ret <= 0)
                 break;
-        }
+	    usleep(50);
+        }	
+    	fsync(before_socket);
     }
 
     void sendAfter(int batch)
@@ -198,7 +202,7 @@ private:
         {
             ret = read(after_socket, pre_pardiff + batch * batch_size * out + (cnt++) * BUFSIZE, BUFSIZE);
             rd_bytes += ret;
-            if (ret == 0)
+            if (ret <= 0)
                 break;
         }
     }
@@ -233,7 +237,7 @@ private:
                 }
             }
         }
-        write(before_socket, post_pardiff, batch_size * in * 8);
+        cout << "write:" << write(before_socket, post_pardiff, batch_size * in * 8) << endl;
     }
 
     double gaussianRandom(void)
@@ -385,6 +389,7 @@ public:
                 rd_bytes += ret;
                 cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
             }
+	    fsync(before_socket);
         }
         if (layer_type == Hidden)
         {
@@ -460,7 +465,7 @@ void download(double *input[], double *output[])
 
 int main(int argc, char **argv)
 {
-    int ch, count = 3;
+    int ch, count = 1;
     while ((ch = getopt(argc, argv, "i:p:l:")) != -1)
     {
         switch (ch)
