@@ -16,7 +16,7 @@
 #define SQR(a) (a) * (a)
 #define LEARNING_RATE 0.001
 #define DATA_SET 60000
-#define BATCH_SIZE 10
+#define BATCH_SIZE 100
 #define BUFSIZE 20000
 #define OUT_SIZE 10
 using namespace std;

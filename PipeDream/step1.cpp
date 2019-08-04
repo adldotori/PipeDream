@@ -16,7 +16,7 @@
 #define SQR(a) (a) * (a)
 #define LEARNING_RATE 0.001
 #define DATA_SET 60000
-#define BATCH_SIZE 1
+#define BATCH_SIZE 100
 #define BUFSIZE 20000
 #define OUT_SIZE 10
 using namespace std;
@@ -282,8 +282,8 @@ private:
 
     void connNext(void)
     {
-        char next_ip[20] = "127.0.0.1";
-        int next_port = 9998;
+        char next_ip[20];
+        int next_port;
         while (1)
         {
             cout << "Next Layer's ip : ";
@@ -395,6 +395,7 @@ public:
 
     void batch_training(int batch)
     {
+        cout << batch << endl;
         recvBefore(batch);
         forwardProp(batch);
         sendAfter(batch);
