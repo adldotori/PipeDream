@@ -188,9 +188,22 @@ private:
 
     void sendAfter(int batch)
     {
+	cout << "send";
         if (after_socket == -1)
             return;
-        write(after_socket, predict + batch * batch_size * out, batch_size * out * 8);
+        int rd_bytes = 0,ret;
+	while(rd_bytes < batch_size * out * 8){
+	    if(rd_bytes > batch_size * out * 8 - BUFSIZE) {
+		ret = write(after_socket, predict + batch * batch_size * out + rd_bytes/8, batch_size*out*8-rd_bytes);
+	    }
+	    else {
+	        ret = write(after_socket, predict + batch * batch_size * out + rd_bytes/8, BUFSIZE);
+	    }
+	    rd_bytes += ret;
+	    cout << rd_bytes << endl;
+	    if(ret <= 0)
+		break;
+	}
     }
 
     void recvAfter(int batch)
