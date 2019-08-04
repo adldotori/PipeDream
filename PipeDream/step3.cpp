@@ -1,4 +1,4 @@
-// multi computer
+// multi computer with pipe para
 #include <iostream>
 #include <algorithm>
 #include <limits.h>
@@ -302,14 +302,14 @@ private:
 
     void connNext(void)
     {
-        char next_ip[20] = "127.0.0.1";
-        int next_port = 9998;
+        char next_ip[20];
+        int next_port;
         while (1)
         {
-            // cout << "Next Layer's ip : ";
-            // cin >> next_ip;
-            // cout << "Next Layer's port : ";
-            // cin >> next_port;
+            cout << "Next Layer's ip : ";
+            cin >> next_ip;
+            cout << "Next Layer's port : ";
+            cin >> next_port;
             after_socket = socket(AF_INET, SOCK_STREAM, 0);
             if (after_socket == -1)
             {

@@ -15,9 +15,9 @@
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
 #define LEARNING_RATE 0.001
-#define DATA_SET 500
-#define BATCH_SIZE 10
-#define BUFSIZE 1000
+#define DATA_SET 60000
+#define BATCH_SIZE 1
+#define BUFSIZE 20000
 #define OUT_SIZE 10
 using namespace std;
 
@@ -173,37 +173,20 @@ private:
         if (before_socket == -1)
             return;
         int cnt = 0, ret, rd_bytes = 0;
-	cout << batch_size * in * 8;
         while (rd_bytes < batch_size * in * 8)
         {
             ret = read(before_socket, input + batch * batch_size * in + (cnt++) * BUFSIZE, BUFSIZE);
             rd_bytes += ret;
-	    cout << rd_bytes << ' ';
-            if (ret <= 0)
+            if (ret == 0)
                 break;
-	    usleep(50);
-        }	
-    	fsync(before_socket);
+        }
     }
 
     void sendAfter(int batch)
     {
-	cout << "send";
         if (after_socket == -1)
             return;
-        int rd_bytes = 0,ret;
-	while(rd_bytes < batch_size * out * 8){
-	    if(rd_bytes > batch_size * out * 8 - BUFSIZE) {
-		ret = write(after_socket, predict + batch * batch_size * out + rd_bytes/8, batch_size*out*8-rd_bytes);
-	    }
-	    else {
-	        ret = write(after_socket, predict + batch * batch_size * out + rd_bytes/8, BUFSIZE);
-	    }
-	    rd_bytes += ret;
-	    cout << rd_bytes << endl;
-	    if(ret <= 0)
-		break;
-	}
+        write(after_socket, predict + batch * batch_size * out, batch_size * out * 8);
     }
 
     void recvAfter(int batch)
@@ -215,7 +198,7 @@ private:
         {
             ret = read(after_socket, pre_pardiff + batch * batch_size * out + (cnt++) * BUFSIZE, BUFSIZE);
             rd_bytes += ret;
-            if (ret <= 0)
+            if (ret == 0)
                 break;
         }
     }
@@ -250,7 +233,7 @@ private:
                 }
             }
         }
-        cout << "write:" << write(before_socket, post_pardiff, batch_size * in * 8) << endl;
+        write(before_socket, post_pardiff, batch_size * in * 8);
     }
 
     double gaussianRandom(void)
@@ -299,8 +282,8 @@ private:
 
     void connNext(void)
     {
-        char next_ip[20];
-        int next_port;
+        char next_ip[20] = "127.0.0.1";
+        int next_port = 9998;
         while (1)
         {
             cout << "Next Layer's ip : ";
@@ -402,7 +385,6 @@ public:
                 rd_bytes += ret;
                 cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
             }
-	    fsync(before_socket);
         }
         if (layer_type == Hidden)
         {
@@ -413,7 +395,6 @@ public:
 
     void batch_training(int batch)
     {
-        cout << batch << endl;
         recvBefore(batch);
         forwardProp(batch);
         sendAfter(batch);
@@ -478,7 +459,7 @@ void download(double *input[], double *output[])
 
 int main(int argc, char **argv)
 {
-    int ch, count = 1;
+    int ch, count = 3;
     while ((ch = getopt(argc, argv, "i:p:l:")) != -1)
     {
         switch (ch)
