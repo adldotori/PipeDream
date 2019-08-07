@@ -38,8 +38,8 @@ enum layer_type
     Output
 };
 
-char ip[20];
-int port;
+char ip[20] = "127.0.0.1";
+int port = 9999;
 
 class Layer
 {
