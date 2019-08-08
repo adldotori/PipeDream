@@ -15,7 +15,7 @@
 #define CentOS 1
 #define ubuntu 2
 #define MacOS 3
-#define LINUX MacOS
+#define LINUX ubuntu
 //#define NOT_AIO
 
 struct aiocb * new_aiocb(int fd, double *buf, int buf_size);

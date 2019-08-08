@@ -472,6 +472,6 @@ int main()
     // hidden_layer1.getData(input, output);
     // hidden_layer1.training(30);
 
-    // output_layer.getData(test_input, test_output);
-    // output_layer.test();
+    // hidden_layer.getData(test_input, test_output);
+    // hidden_layer.test();
 }
