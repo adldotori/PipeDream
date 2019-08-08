@@ -30,12 +30,10 @@ void aio_handler(sigval sigval)
     struct aiocb * my_aiocb = (struct aiocb *)sigval.sival_ptr;
     int fd = my_aiocb->aio_fildes;
     if (aio_error( my_aiocb ) == 0) {
-        int ret = aio_return( my_aiocb );
         my_aiocb->aio_fildes = 0;
     }
     else {
-	perror("aio_handler");
-	my_aiocb->aio_fildes = -1;
+	    my_aiocb->aio_fildes = -1;
     }
     return;
 }

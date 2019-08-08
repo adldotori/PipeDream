@@ -14,10 +14,10 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
-#define LEARNING_RATE 0.001
+#define LEARNING_RATE 0.0005
 #define DATA_SET 60000
 #define TEST_DATA_SET 10000
-#define BATCH_SIZE 10
+#define BATCH_SIZE 100
 #define BUFSIZE 20480
 #define MAXSIZE 5000000
 #define OUT_SIZE 10
@@ -173,7 +173,7 @@ private:
         int cnt = 0, ret, rd_bytes = 0;
         while (rd_bytes < batch_size * in * 8)
         {
-            ret = read(before_socket, input + batch * batch_size * in + (cnt++) * BUFSIZE, min(batch_size * in * 8 - rd_bytes, BUFSIZE));
+            ret = read(before_socket, (double *)((char *)(input + batch * batch_size * in) + rd_bytes), min(batch_size * in * 8 - rd_bytes, BUFSIZE));
             if (ret == 0)
                 break;
             else if (ret < 0)
@@ -206,7 +206,7 @@ private:
         int cnt = 0, ret, rd_bytes = 0;
         while (rd_bytes < batch_size * out * 8)
         {
-            ret = read(after_socket, pre_pardiff + batch * batch_size * out + (cnt++) * BUFSIZE,  min(batch_size * out * 8 - rd_bytes, BUFSIZE));
+            ret = read(after_socket, (double *)((char *)(pre_pardiff + batch * batch_size * out) + rd_bytes), min(batch_size * out * 8 - rd_bytes, BUFSIZE));
             if (ret == 0)
                 break;
             else if (ret < 0)
@@ -228,7 +228,7 @@ private:
             return;
 
         double *post_pardiff = new double[batch_size * in];
-        for(int i = 0; i < batch_size * in; i++)
+        for (int i = 0; i < batch_size * in; i++)
         {
             post_pardiff[i] = 0;
         }
@@ -267,8 +267,8 @@ private:
         double v1, v2, s;
         do
         {
-            v1 = 2 * ((double)rand() / RAND_MAX) - 1; // -1.0 ~ 1.0 
-            v2 = 2 * ((double)rand() / RAND_MAX) - 1; // -1.0 ~ 1.0 
+            v1 = 2 * ((double)rand() / RAND_MAX) - 1; // -1.0 ~ 1.0
+            v2 = 2 * ((double)rand() / RAND_MAX) - 1; // -1.0 ~ 1.0
             s = v1 * v1 + v2 * v2;
         } while (s >= 1 || s == 0);
 
@@ -334,10 +334,6 @@ private:
         cout << "connect Completed!" << endl;
     }
 
-    void sendOutput(void)
-    {
-    }
-
     void batch_training(int batch)
     {
         recvBefore(batch);
@@ -350,7 +346,6 @@ private:
                 for (int j = 0; j < out; j++)
                 {
                     int out_cnt = i * out + j;
-                    // if(batch == 122) cout << "sdfsdfsdfsdf" << predict[out_cnt] << ' ' << output[out_cnt] << endl;
                     pre_pardiff[out_cnt] = predict[out_cnt] - output[out_cnt];
                 }
             }
@@ -424,11 +419,10 @@ public:
         if (output == NULL)
         {
             this->output = new double[len * OUT_SIZE];
-            printf("[+] read io\n");
             int cnt = 0, ret, rd_bytes = 0;
             while (rd_bytes < len * OUT_SIZE * 8)
             {
-                ret = read(before_socket, this->output + rd_bytes / 8, min(len * OUT_SIZE * 8 - rd_bytes, BUFSIZE));
+                ret = read(before_socket, (double *)((char *)this->output + rd_bytes), min(len * OUT_SIZE * 8 - rd_bytes, BUFSIZE));
                 rd_bytes += ret;
                 // cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
                 if (ret <= 0)
@@ -440,13 +434,12 @@ public:
         }
         if (layer_type != Output)
         {
-            printf("[+] write io\n");
             int cnt = 0, ret, rd_bytes = 0;
             while (rd_bytes < len * OUT_SIZE * 8)
             {
-                ret = write(after_socket, this->output + rd_bytes / 8, min(len * OUT_SIZE * 8 - rd_bytes, BUFSIZE));
+                ret = write(after_socket, (double *)((char *)this->output + rd_bytes), min(len * OUT_SIZE * 8 - rd_bytes, MAXSIZE));
                 rd_bytes += ret;
-                // cout << cnt++ << " times read ... (" << rd_bytes << "bytes)" << endl;
+                // cout << cnt++ << " times write ... (" << rd_bytes << "bytes)" << endl;
                 if (ret <= 0)
                 {
                     cout << "ERROR!" << endl;
@@ -458,19 +451,13 @@ public:
 
     void training(int step)
     {
-        for(int i=0;i<DATA_SET;i++){
-            for(int j=0;j<10;j++){
-                int k=0;
-                if(output[i * 10 + j]!= 0 || output[i * 10 + j]!=0) {
-                    if(k==0){
-                        k=1;
-                        output[i*10+j]=1;
-                    }
-                    else {
-                        cout << i << output[i*10 + j] << endl;
-                    }
-                }
+        for (int i = 0; i < DATA_SET; i++)
+        {
+            for (int j = 0; j < 10; j++)
+            {
+                // cout << output[i * 10 + j];
             }
+            // cout << endl;
         }
         for (int i = 0; i < step; i++)
         {
@@ -486,7 +473,7 @@ public:
     {
         cout << "TEST" << endl;
         batch_size = len / 2;
-        for(int i = 0; i < len / batch_size; i++)
+        for (int i = 0; i < len / batch_size; i++)
         {
             recvBefore(i);
             forwardProp(i);
@@ -556,13 +543,13 @@ void download_test(double *input[], double *output[])
 
 int main(int argc, char **argv)
 {
-    int ch, count = 10;
+    int ch, count = 5;
     while ((ch = getopt(argc, argv, "i:p:l:")) != -1)
     {
         switch (ch)
         {
         case 'i':
-            strncpy(ip, optarg, strlen(optarg));
+            strcpy(ip, optarg);
             break;
         case 'p':
             port = atoi(optarg);
