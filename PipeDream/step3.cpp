@@ -15,10 +15,10 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
-#define LEARNING_RATE 0.001
-#define DATA_SET 10000
+#define LEARNING_RATE 0.01
+#define DATA_SET 150
 #define TEST_DATA_SET 10000
-#define BATCH_SIZE 100
+#define BATCH_SIZE 10
 #define BUFSIZE 1950
 #define MAXSIZE 5000000
 #define OUT_SIZE 10
@@ -108,6 +108,7 @@ private:
 
     void forwardProp(int batch)
     {
+        cout << "fw : " << batch << endl;
         for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
         {
             double *ret = new double[out];
@@ -140,6 +141,7 @@ private:
 
     void backwardProp(int batch)
     {
+        cout << "bw : " << batch << endl;
         for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
         {
             for (int j = 0; j < out; j++)
@@ -172,9 +174,9 @@ private:
     {
         if (before_socket == -1)
             return NULL;
-        int cnt = 0, ret, rd_bytes = 0, max_cnt = batch_size * in * 8 / BUFSIZE + 1;
+        int cnt = 0, ret, rd_bytes = 0, max_cnt = (batch_size * in * 8 - 1)/ BUFSIZE + 1;
+        cout << max_cnt << endl;
         struct aiocb *final_aiocb = (struct aiocb *)malloc(sizeof(struct aiocb));
-        cout << endl << batch << ": ";
         while (cnt < max_cnt)
         {
             struct aiocb *my_aiocb = new_aiocb(before_socket, (double *)((char *)(input + batch * batch_size * in) + cnt++ * BUFSIZE), BUFSIZE);
@@ -190,21 +192,18 @@ private:
             return;
         struct aiocb *my_aiocb = new_aiocb(after_socket, predict + batch * batch_size * out, batch_size * out * 8);
         aio_write(my_aiocb);
-        while (my_aiocb->aio_fildes == after_socket)
-        {
-        }
     }
 
     struct aiocb * recvAfter(int batch)
     {
         if (after_socket == -1)
             return NULL;
-        int cnt = 0, ret, rd_bytes = 0, max_cnt = batch_size * out * 8 / BUFSIZE + 1;
+        int cnt = 0, ret, rd_bytes = 0, max_cnt = (batch_size * out * 8 - 1)/ BUFSIZE + 1;
+        cout << max_cnt << endl;
         struct aiocb *final_aiocb = (struct aiocb *)malloc(sizeof(struct aiocb));
-        cout << endl << batch << ": ";
         while (cnt < max_cnt)
         {
-            struct aiocb *my_aiocb = new_aiocb(after_socket, (double *)((char *)(predict + batch * batch_size * out) + cnt++ * BUFSIZE), BUFSIZE);
+            struct aiocb *my_aiocb = new_aiocb(after_socket, (double *)((char *)(pre_pardiff + batch * batch_size * out) + cnt++ * BUFSIZE), BUFSIZE);
             aio_read(my_aiocb);
             final_aiocb = my_aiocb;
         }
@@ -215,7 +214,8 @@ private:
     {
         if (before_socket == -1)
             return;
-
+        sleep(3);
+        cout << "send" << batch << endl;
         double *post_pardiff = new double[batch_size * in];
         for (int i = 0; i < batch_size * in; i++)
         {
@@ -244,11 +244,17 @@ private:
                 }
             }
         }
+        // for(int i= 0; i < batch_size * in;i++){
+        //     cout << post_pardiff[i] << ' ';
+        // }
         struct aiocb *my_aiocb = new_aiocb(before_socket, post_pardiff, batch_size * in * 8);
         aio_write(my_aiocb);
-        while (my_aiocb->aio_fildes == before_socket)
+        cout << batch << ' ' << len /batch_size -1 << endl;
+        if(batch == len / batch_size - 1)
         {
+            while(my_aiocb->aio_fildes == before_socket){}
         }
+        cout << "fin";
     }
 
     double gaussianRandom(void)
@@ -323,13 +329,14 @@ private:
         cout << "connect Completed!" << endl;
     }
 
-    void batch_training(int batch)
+    void forward(int batch)
     {
-        recv_aiocb[2 * batch] = recvBefore(batch);
-        if(recv_aiocb[2 * batch])
-            while(recv_aiocb[2 * batch]->aio_fildes == before_socket){}
         forwardProp(batch);
         sendAfter(batch);
+    }
+
+    void backward(int batch)
+    {
         if (layer_type == Output)
         {
             for (int i = batch * batch_size; i < (batch + 1) * batch_size; i++)
@@ -341,9 +348,6 @@ private:
                 }
             }
         }
-        recv_aiocb[2 * batch + 1] = recvAfter(batch);
-        if(recv_aiocb[2 * batch + 1])
-            while(recv_aiocb[2 * batch + 1]->aio_fildes == after_socket){}
         backwardProp(batch);
         sendBefore(batch);
         if (layer_type == Output && batch == len / batch_size - 1)
@@ -445,9 +449,41 @@ public:
         for (int i = 0; i < step; i++)
         {
             cout << "training " << i + 1 << endl;
-            for (int j = 0; j < len / batch_size; j++)
+            int k, f_batch = 0, b_batch = 0;
+            if(layer_type == Output) k = 0;
+            else k = 1;
+            for(; f_batch < k * 2; f_batch++)
             {
-                batch_training(j);
+                recv_aiocb[2 * f_batch] = recvBefore(f_batch);
+                if(recv_aiocb[2 * f_batch])
+                    while(recv_aiocb[2 * f_batch]->aio_fildes == before_socket){}
+                forward(f_batch);
+            }
+            recv_aiocb[2 * f_batch] = recvBefore(f_batch);
+            for (; f_batch < len / batch_size; b_batch++)
+            {
+                recv_aiocb[2 * b_batch + 1] = recvAfter(b_batch);
+                if(recv_aiocb[2 * f_batch])
+                    while(recv_aiocb[2 * f_batch]->aio_fildes == before_socket){}
+                forward(f_batch++);
+                recv_aiocb[2 * f_batch] = recvBefore(f_batch);
+                if(recv_aiocb[2 * b_batch + 1])
+                    while(recv_aiocb[2 * b_batch + 1]->aio_fildes == after_socket){}
+                // for(int i=b_batch *batch_size*out;i<(b_batch+1) *batch_size*out;i++){
+                //     cout << pre_pardiff[i] << ' ';
+                // }
+                backward(b_batch);
+            }
+            for(; b_batch < len / batch_size + 1; b_batch++)
+            {
+                cout << b_batch << endl;
+                recv_aiocb[2 * b_batch + 1] = recvAfter(b_batch);
+                if(recv_aiocb[2 * b_batch + 1])
+                    while(recv_aiocb[2 * b_batch + 1]->aio_fildes == after_socket){ sleep(1); cout << "waiting";} 
+                // for(int i=b_batch *batch_size*out;i<(b_batch+1) *batch_size*out;i++){
+                //     cout << pre_pardiff[i] << ' ';
+                // }
+                backward(b_batch);
             }
         }
     }
