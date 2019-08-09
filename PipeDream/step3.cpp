@@ -15,9 +15,9 @@
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
 #define LEARNING_RATE 0.001
-#define DATA_SET 60000
+#define DATA_SET 10000
 #define TEST_DATA_SET 10000
-#define BATCH_SIZE 1
+#define BATCH_SIZE 100
 #define BUFSIZE 20480
 #define MAXSIZE 5000000
 #define OUT_SIZE 10
@@ -51,6 +51,8 @@ private:
     int before_socket, after_socket;
     enum active_mode active;
     enum layer_type layer_type;
+    struct aiocb ** recvBefore_aiocb;
+    struct aiocb ** recvAfter_aiocb;
 
     void activation(int k, double *val)
     {
@@ -166,26 +168,20 @@ private:
         cout << endl;
     }
 
-    void recvBefore(int batch)
+    struct aiocb * recvBefore(int batch)
     {
         if (before_socket == -1)
-            return;
-        int cnt = 0, ret, rd_bytes = 0;
-        while (rd_bytes < batch_size * in * 8)
+            return NULL;
+        int cnt = 0, ret, rd_bytes = 0, max_cnt = batch_size * in * 8 / 2000 + 1;
+        struct aiocb *final_aiocb = (struct aiocb *)malloc(sizeof(struct aiocb));
+        cout << endl << batch << ": ";
+        while (cnt < max_cnt)
         {
-            struct aiocb *my_aiocb = new_aiocb(before_socket, (double *)((char *)(input + batch * batch_size * in) + rd_bytes), min(batch_size * in * 8 - rd_bytes, BUFSIZE));
+            struct aiocb *my_aiocb = new_aiocb(before_socket, (double *)((char *)(input + batch * batch_size * in) + cnt++ * 2000), 2000);
             aio_read(my_aiocb);
-            while (my_aiocb->aio_fildes == before_socket)
-            {
-            }
-            ret = aio_return(my_aiocb);
-            rd_bytes += ret;
-            if(ret <= 0)
-            {
-                cout << "ERROR" <<endl;
-                exit(1);
-            }
+            final_aiocb = my_aiocb;
         }
+        return final_aiocb;
     }
 
     void sendAfter(int batch)
@@ -199,26 +195,20 @@ private:
         }
     }
 
-    void recvAfter(int batch)
+    struct aiocb * recvAfter(int batch)
     {
         if (after_socket == -1)
-            return;
-        int cnt = 0, ret, rd_bytes = 0;
-        while (rd_bytes < batch_size * out * 8)
+            return NULL;
+        int cnt = 0, ret, rd_bytes = 0, max_cnt = batch_size * out * 8 / 2000 + 1;
+        struct aiocb *final_aiocb = (struct aiocb *)malloc(sizeof(struct aiocb));
+        cout << endl << batch << ": ";
+        while (cnt < max_cnt)
         {
-            struct aiocb *my_aiocb = new_aiocb(after_socket, (double *)((char *)(pre_pardiff + batch * batch_size * out) + rd_bytes), min(batch_size * out * 8 - rd_bytes, BUFSIZE));
+            struct aiocb *my_aiocb = new_aiocb(after_socket, (double *)((char *)(pre_pardiff + batch * batch_size * out) + cnt++ * 2000), 2000);
             aio_read(my_aiocb);
-            while (my_aiocb->aio_fildes == after_socket)
-            {
-            }
-            ret = aio_return(my_aiocb);
-            rd_bytes += ret;
-            if(ret <= 0)
-            {
-                cout << "ERROR" <<endl;
-                exit(1);
-            }
+            final_aiocb = my_aiocb;
         }
+        return final_aiocb;
     }
 
     void sendBefore(int batch)
@@ -335,7 +325,8 @@ private:
 
     void batch_training(int batch)
     {
-        recvBefore(batch);
+        recvBefore_aiocb[batch] = recvBefore(batch);
+        while(recvBefore_aiocb[batch]->aio_fildes == before_socket){}
         forwardProp(batch);
         sendAfter(batch);
         if (layer_type == Output)
@@ -349,7 +340,8 @@ private:
                 }
             }
         }
-        recvAfter(batch);
+        recvAfter_aiocb[batch] = recvAfter(batch);
+        while(recvAfter_aiocb[batch]->aio_fildes == after_socket){}
         backwardProp(batch);
         sendBefore(batch);
         if (layer_type == Output && batch == len / batch_size - 1)
@@ -397,6 +389,13 @@ public:
         predict = new double[len * out];
         pre_pardiff = new double[len * out];
         batch_size = BATCH_SIZE;
+        recvBefore_aiocb = new struct aiocb * [len / batch_size +1];
+        recvAfter_aiocb = new struct aiocb * [len / batch_size +1];
+        for(int i = 0; i < len / batch_size; i++)
+        {
+            recvBefore_aiocb[i] = (struct aiocb *)malloc(sizeof(struct aiocb));
+            recvAfter_aiocb[i] = (struct aiocb *)malloc(sizeof(struct aiocb));
+        }
         if (len < batch_size)
             batch_size = 1;
         if (layer_type != Output)
@@ -531,7 +530,7 @@ void download_test(double *input[], double *output[])
 
 int main(int argc, char **argv)
 {
-    int ch, count = 100;
+    int ch, count = 1;
     while ((ch = getopt(argc, argv, "i:p:l:")) != -1)
     {
         switch (ch)
