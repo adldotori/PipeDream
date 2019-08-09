@@ -1,4 +1,4 @@
-// multi computer
+// Model Parallelism
 #include <iostream>
 #include <algorithm>
 #include <limits.h>

@@ -1,4 +1,4 @@
-// multi computer with aio
+// Model Parallelism with aio
 #include <iostream>
 #include <algorithm>
 #include <limits.h>
@@ -447,14 +447,6 @@ public:
 
     void training(int step)
     {
-        for (int i = 0; i < DATA_SET; i++)
-        {
-            for (int j = 0; j < 10; j++)
-            {
-                cout << output[i * 10 + j];
-            }
-            cout << endl;
-        }
         for (int i = 0; i < step; i++)
         {
             cout << "training " << i + 1 << endl;
