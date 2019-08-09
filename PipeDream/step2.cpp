@@ -14,10 +14,10 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
-#define LEARNING_RATE 0.0001
+#define LEARNING_RATE 0.001
 #define DATA_SET 60000
 #define TEST_DATA_SET 10000
-#define BATCH_SIZE 100
+#define BATCH_SIZE 1
 #define BUFSIZE 20480
 #define MAXSIZE 5000000
 #define OUT_SIZE 10
@@ -331,6 +331,7 @@ private:
 
     void batch_training(int batch)
     {
+        cout << batch << endl;
         recvBefore(batch);
         forwardProp(batch);
         sendAfter(batch);
