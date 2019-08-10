@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include <thread>
 #define USE_MNIST_LOADER
 #define MNIST_DOUBLE
 #include "mnist.h"
@@ -15,11 +14,11 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
-#define LEARNING_RATE 0.01
-#define DATA_SET 150
+#define LEARNING_RATE 0.001
+#define DATA_SET 60000
 #define TEST_DATA_SET 10000
-#define BATCH_SIZE 10
-#define BUFSIZE 1950
+#define BATCH_SIZE 100
+#define BUFSIZE 2000
 #define MAXSIZE 5000000
 #define OUT_SIZE 10
 using namespace std;
@@ -44,7 +43,7 @@ class Layer
 {
 private:
     int in, out, len; // input node, output node, cnt of data
-    int batch_size;
+    int batch_size, tot_batch;
     double **w, *b;
     double *input, *output; // data*in, data*out
     double *predict;
@@ -174,8 +173,7 @@ private:
     {
         if (before_socket == -1)
             return NULL;
-        int cnt = 0, ret, rd_bytes = 0, max_cnt = (batch_size * in * 8 - 1)/ BUFSIZE + 1;
-        cout << max_cnt << endl;
+        int cnt = 0, ret, rd_bytes = 0, max_cnt = (batch_size * in * 8 - 1) / BUFSIZE + 1;
         struct aiocb *final_aiocb = (struct aiocb *)malloc(sizeof(struct aiocb));
         while (cnt < max_cnt)
         {
@@ -198,8 +196,7 @@ private:
     {
         if (after_socket == -1)
             return NULL;
-        int cnt = 0, ret, rd_bytes = 0, max_cnt = (batch_size * out * 8 - 1)/ BUFSIZE + 1;
-        cout << max_cnt << endl;
+        int cnt = 0, ret, rd_bytes = 0, max_cnt = (batch_size * out * 8 - 1) / BUFSIZE + 1;
         struct aiocb *final_aiocb = (struct aiocb *)malloc(sizeof(struct aiocb));
         while (cnt < max_cnt)
         {
@@ -214,8 +211,6 @@ private:
     {
         if (before_socket == -1)
             return;
-        sleep(3);
-        cout << "send" << batch << endl;
         double *post_pardiff = new double[batch_size * in];
         for (int i = 0; i < batch_size * in; i++)
         {
@@ -244,17 +239,8 @@ private:
                 }
             }
         }
-        // for(int i= 0; i < batch_size * in;i++){
-        //     cout << post_pardiff[i] << ' ';
-        // }
         struct aiocb *my_aiocb = new_aiocb(before_socket, post_pardiff, batch_size * in * 8);
         aio_write(my_aiocb);
-        cout << batch << ' ' << len /batch_size -1 << endl;
-        if(batch == len / batch_size - 1)
-        {
-            while(my_aiocb->aio_fildes == before_socket){}
-        }
-        cout << "fin";
     }
 
     double gaussianRandom(void)
@@ -350,7 +336,7 @@ private:
         }
         backwardProp(batch);
         sendBefore(batch);
-        if (layer_type == Output && batch == len / batch_size - 1)
+        if (layer_type == Output && batch == tot_batch - 1)
         {
             cout << "COST : " << cost() << endl;
             prediction();
@@ -363,6 +349,9 @@ public:
         // initialization
         in = in_;
         out = out_;
+        len = DATA_SET;
+        batch_size = BATCH_SIZE;
+        tot_batch = (len - 1) / batch_size + 1;
         input = new double[len * in];
         output = NULL;
         this->active = active;
@@ -394,10 +383,7 @@ public:
             b[i] = 0;
         predict = new double[len * out];
         pre_pardiff = new double[len * out];
-        batch_size = BATCH_SIZE;
-        recv_aiocb = new struct aiocb * [(len / batch_size + 1) * 2];
-        if (len < batch_size)
-            batch_size = 1;
+        recv_aiocb = new struct aiocb * [tot_batch * 2];
         if (layer_type != Output)
             connNext();
         if (layer_type != Input)
@@ -427,13 +413,14 @@ public:
                 }
                 ret = aio_return(my_aiocb);
                 rd_bytes += ret;
+                cout << rd_bytes << ' ';
                 if (ret < 0)
                 {
                     cout << "ERROR!" << endl;
                     exit(1);
                 }
             }
-        }
+        } 
         if (layer_type != Output)
         {
             struct aiocb *my_aiocb = new_aiocb(after_socket, this->output, len * OUT_SIZE * 8);
@@ -449,41 +436,44 @@ public:
         for (int i = 0; i < step; i++)
         {
             cout << "training " << i + 1 << endl;
-            int k, f_batch = 0, b_batch = 0;
-            if(layer_type == Output) k = 0;
-            else k = 1;
-            for(; f_batch < k * 2; f_batch++)
+            cout << tot_batch;
+            int batch = 0, mach_idx;
+            if (layer_type == Output)
+                mach_idx = 0;
+            else
+                mach_idx = 1;
+            for (int batch = 0; batch < tot_batch + 2 * mach_idx + 1; batch++)
             {
-                recv_aiocb[2 * f_batch] = recvBefore(f_batch);
-                if(recv_aiocb[2 * f_batch])
-                    while(recv_aiocb[2 * f_batch]->aio_fildes == before_socket){}
-                forward(f_batch);
-            }
-            recv_aiocb[2 * f_batch] = recvBefore(f_batch);
-            for (; f_batch < len / batch_size; b_batch++)
-            {
-                recv_aiocb[2 * b_batch + 1] = recvAfter(b_batch);
-                if(recv_aiocb[2 * f_batch])
-                    while(recv_aiocb[2 * f_batch]->aio_fildes == before_socket){}
-                forward(f_batch++);
-                recv_aiocb[2 * f_batch] = recvBefore(f_batch);
-                if(recv_aiocb[2 * b_batch + 1])
-                    while(recv_aiocb[2 * b_batch + 1]->aio_fildes == after_socket){}
-                // for(int i=b_batch *batch_size*out;i<(b_batch+1) *batch_size*out;i++){
-                //     cout << pre_pardiff[i] << ' ';
-                // }
-                backward(b_batch);
-            }
-            for(; b_batch < len / batch_size + 1; b_batch++)
-            {
-                cout << b_batch << endl;
-                recv_aiocb[2 * b_batch + 1] = recvAfter(b_batch);
-                if(recv_aiocb[2 * b_batch + 1])
-                    while(recv_aiocb[2 * b_batch + 1]->aio_fildes == after_socket){ sleep(1); cout << "waiting";} 
-                // for(int i=b_batch *batch_size*out;i<(b_batch+1) *batch_size*out;i++){
-                //     cout << pre_pardiff[i] << ' ';
-                // }
-                backward(b_batch);
+                int f_batch = batch - 1;
+                int b_batch = batch - 2 * mach_idx - 1;
+
+                // recvAfter(i - 2k - 1)
+                if (b_batch >= 0 && b_batch < tot_batch)
+                    recv_aiocb[b_batch] = recvAfter(b_batch);
+
+                // forward(i - 1)
+                if (f_batch >= 0 && f_batch < tot_batch)
+                {
+                    if (recv_aiocb[2 * f_batch])
+                        while (recv_aiocb[2 * f_batch]->aio_fildes == before_socket)
+                        {
+                        }
+                    forward(f_batch);
+                }
+
+                // recvBefore(i)
+                if (batch >= 0 && batch < tot_batch)
+                    recv_aiocb[2 * batch] = recvBefore(batch);
+
+                // backward(i - 2k -1)
+                if (b_batch >= 0 && b_batch < tot_batch)
+                {
+                    if (recv_aiocb[2 * b_batch + 1])
+                        while (recv_aiocb[2 * b_batch + 1]->aio_fildes == after_socket)
+                        {
+                        }
+                    backward(b_batch);
+                }
             }
         }
     }
@@ -492,14 +482,18 @@ public:
     {
         cout << "TEST" << endl;
         batch_size = len / 2;
-        for (int i = 0; i < len / batch_size; i++)
+        tot_batch = 2;
+        for (int i = 0; i < tot_batch; i++)
         {
+            cout << i;
             recv_aiocb[i] = recvBefore(i);
-            if(recv_aiocb[i])
-                while(recv_aiocb[i]->aio_fildes == before_socket){}
-            forwardProp(i);
-            sendAfter(i);
-            if (layer_type == Output && i == len / batch_size - 1)
+            if (recv_aiocb[i])
+                while (recv_aiocb[i]->aio_fildes == before_socket)
+                {
+                    // cout << "waiting";
+                }
+            forward(i);
+            if (layer_type == Output && i == tot_batch - 1)
             {
                 prediction();
             }
