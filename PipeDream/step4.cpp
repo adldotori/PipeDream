@@ -1,4 +1,4 @@
-// Pipeline Parallelism
+// Pipeline Parallelism(weight version)
 #include <iostream>
 #include <algorithm>
 #include <limits.h>
@@ -15,8 +15,8 @@
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
 #define LEARNING_RATE 0.001
-#define DATA_SET 1000
-#define TEST_DATA_SET 10000
+#define DATA_SET 60000
+#define TEST_DATA_SET 0
 #define BATCH_SIZE 10
 #define BUFSIZE 2000
 #define MAXSIZE 5000000
@@ -349,11 +349,6 @@ public:
         // initialization
         in = in_;
         out = out_;
-        len = DATA_SET;
-        batch_size = BATCH_SIZE;
-        tot_batch = (len - 1) / batch_size + 1;
-        input = new double[len * in];
-        output = NULL;
         this->active = active;
         this->layer_type = layer_type;
         before_socket = -1;
@@ -381,9 +376,6 @@ public:
         b = new double[out];
         for (int i = 0; i < out; i++)
             b[i] = 0;
-        predict = new double[len * out];
-        pre_pardiff = new double[len * out];
-        recv_aiocb = new struct aiocb * [tot_batch * 2];
         if (layer_type != Output)
             connNext();
         if (layer_type != Input)
@@ -395,6 +387,14 @@ public:
     void getData(double *input, double *output, int len = DATA_SET)
     {
         this->len = len;
+        batch_size = BATCH_SIZE;
+        tot_batch = (len - 1) / batch_size + 1;
+        this->input = new double[len * in];
+        this->output = NULL;
+        predict = new double[len * out];
+        pre_pardiff = new double[len * out];
+        recv_aiocb = new struct aiocb * [tot_batch * 2];
+
         if (input != NULL && output != NULL)
         {
             this->input = input;
@@ -413,7 +413,6 @@ public:
                 }
                 ret = aio_return(my_aiocb);
                 rd_bytes += ret;
-                cout << rd_bytes << ' ';
                 if (ret < 0)
                 {
                     cout << "ERROR!" << endl;
@@ -428,7 +427,12 @@ public:
             while (my_aiocb->aio_fildes == after_socket)
             {
             }
+            cout << "write";
         }
+    }
+
+    void getMachInfo(void)
+    {
     }
 
     void training(int step)
@@ -436,8 +440,7 @@ public:
         for (int i = 0; i < step; i++)
         {
             cout << "training " << i + 1 << endl;
-            cout << tot_batch;
-            int batch = 0, mach_idx;
+            int mach_idx;
             if (layer_type == Output)
                 mach_idx = 0;
             else
@@ -446,10 +449,10 @@ public:
             {
                 int f_batch = batch - 1;
                 int b_batch = batch - 2 * mach_idx - 1;
-
+                cout << f_batch << b_batch << endl;
                 // recvAfter(i - 2k - 1)
                 if (b_batch >= 0 && b_batch < tot_batch)
-                    recv_aiocb[b_batch] = recvAfter(b_batch);
+                    recv_aiocb[2 * b_batch + 1] = recvAfter(b_batch);
 
                 // forward(i - 1)
                 if (f_batch >= 0 && f_batch < tot_batch)
@@ -474,18 +477,17 @@ public:
                         }
                     backward(b_batch);
                 }
+                cout << batch << endl;
             }
+            cout << "end";
         }
     }
 
     void test(void)
     {
         cout << "TEST" << endl;
-        batch_size = len / 2;
-        tot_batch = 2;
         for (int i = 0; i < tot_batch; i++)
         {
-            cout << i;
             recv_aiocb[i] = recvBefore(i);
             if (recv_aiocb[i])
                 while (recv_aiocb[i]->aio_fildes == before_socket)

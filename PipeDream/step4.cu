@@ -11,12 +11,14 @@
 #define MNIST_DOUBLE
 #include "mnist.h"
 #include "aiocb.h"
+#include <cublas_v2.h>
+#include <cuda_runtime.h>
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
 #define LEARNING_RATE 0.001
 #define DATA_SET 60000
-#define TEST_DATA_SET 10000
+#define TEST_DATA_SET 0
 #define BATCH_SIZE 100
 #define BUFSIZE 2000
 #define MAXSIZE 5000000
@@ -38,6 +40,16 @@ enum layer_type
 
 char ip[20] = "127.0.0.1";
 int port = 1597;
+cublasHandle_t handle;
+
+
+void MatrixMultiply(double *d_A, double *d_B, double *d_C, int A_H, int A_W, int B_W)
+{
+	const double alp = 1.0f;
+	const double bet  = 0.0f;
+		
+	cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, B_W, A_H, A_W, &alp, d_B, B_W, d_A, A_W, &bet, d_C, B_W);
+}
 
 class Layer
 {
@@ -45,9 +57,11 @@ private:
     int in, out, len; // input node, output node, cnt of data
     int batch_size, tot_batch;
     double **w, *b;
+    double **w_d, *b_d;
     double *input, *output; // data*in, data*out
-    double *predict;
-    double *pre_pardiff;
+    double *input_d, *output_d;
+    double *predict, *predict_d;
+    double *pre_pardiff, *pre_pardiff_d;
     int before_socket, after_socket;
     enum active_mode active;
     enum layer_type layer_type;
@@ -108,18 +122,14 @@ private:
     void forwardProp(int batch)
     {
         cout << "fw : " << batch << endl;
+        cudaMemcpy(input_d, input + batch * batch_size * in, sizeof(double) * batch_size * in, cudaMemcpyHostToDevice);
+        double *ret = new double[out * batch_size], *ret_d;
+        cudaMalloc((void**) &ret_d, out * batch_size * sizeof(double));
+        MatrixMultiply(input_d, *w_d, ret_d, batch_size, in, out);
+        cudaMemcpy(ret, ret_d, sizeof(double) * out * batch_size, cudaMemcpyDeviceToHost);
         for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
         {
-            double *ret = new double[out];
-            for (int i = 0; i < out; i++)
-            {
-                for (int j = 0; j < in; j++)
-                {
-                    ret[i] += w[j][i] * input[k * in + j];
-                }
-                ret[i] += b[i];
-            }
-            activation(k, ret);
+            activation(k, &ret[(k - batch * batch_size) * out]);
         }
     }
 
@@ -353,6 +363,7 @@ public:
         batch_size = BATCH_SIZE;
         tot_batch = (len - 1) / batch_size + 1;
         input = new double[len * in];
+        cudaMalloc((void**) &input_d, in * batch_size * sizeof(double));
         output = NULL;
         this->active = active;
         this->layer_type = layer_type;
@@ -360,6 +371,7 @@ public:
         after_socket = -1;
         srand(time(NULL));
         w = new double *[in];
+        cudaMalloc((void**) &w_d, in * sizeof(double));
         for (int i = 0; i < in; i++)
         {
             w[i] = new double[out];
@@ -378,11 +390,14 @@ public:
                 }
             }
         }
+        cudaMemcpy(w_d, w, sizeof(double), cudaMemcpyHostToDevice);
         b = new double[out];
         for (int i = 0; i < out; i++)
             b[i] = 0;
         predict = new double[len * out];
+        cudaMalloc((void**) &predict_d, len * out * sizeof(double));
         pre_pardiff = new double[len * out];
+        cudaMalloc((void**) &pre_pardiff_d, len * out * sizeof(double));
         recv_aiocb = new struct aiocb * [tot_batch * 2];
         if (layer_type != Output)
             connNext();
@@ -559,6 +574,7 @@ void download_test(double *input[], double *output[])
 int main(int argc, char **argv)
 {
     int ch, count = 1;
+    cublasCreate(&handle);
     while ((ch = getopt(argc, argv, "i:p:l:")) != -1)
     {
         switch (ch)

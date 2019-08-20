@@ -34,7 +34,8 @@ void aio_handler(sigval sigval)
         my_aiocb->aio_fildes = 0;
     }
     else {
-	    my_aiocb->aio_fildes = -1;
+        printf("ERROR!\n");
+        exit(1);
     }
     return;
 }
