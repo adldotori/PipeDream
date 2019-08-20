@@ -122,11 +122,17 @@ private:
     void forwardProp(int batch)
     {
         cout << "fw : " << batch << endl;
+        cout << "1";
         cudaMemcpy(input_d, input + batch * batch_size * in, sizeof(double) * batch_size * in, cudaMemcpyHostToDevice);
+        cout << "1";
         double *ret = new double[out * batch_size], *ret_d;
+        cout << "1";
         cudaMalloc((void**) &ret_d, out * batch_size * sizeof(double));
+        cout << "1";
         MatrixMultiply(input_d, *w_d, ret_d, batch_size, in, out);
+        cout << "1";
         cudaMemcpy(ret, ret_d, sizeof(double) * out * batch_size, cudaMemcpyDeviceToHost);
+        cout << "1";
         for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
         {
             activation(k, &ret[(k - batch * batch_size) * out]);
@@ -371,7 +377,7 @@ public:
         after_socket = -1;
         srand(time(NULL));
         w = new double *[in];
-        cudaMalloc((void**) &w_d, in * sizeof(double));
+        cudaMalloc((void**) &w_d, in * out * sizeof(double));
         for (int i = 0; i < in; i++)
         {
             w[i] = new double[out];
@@ -390,7 +396,7 @@ public:
                 }
             }
         }
-        cudaMemcpy(w_d, w, sizeof(double), cudaMemcpyHostToDevice);
+        cudaMemcpy(w_d, w, sizeof(double) * in * out, cudaMemcpyHostToDevice);
         b = new double[out];
         for (int i = 0; i < out; i++)
             b[i] = 0;
