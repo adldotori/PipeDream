@@ -42,6 +42,12 @@ char ip[20] = "127.0.0.1";
 int port = 1597;
 cublasHandle_t handle;
 
+__global__ void Print(double *a, int size)
+{
+	for(int i=0; i<size; i++)
+		printf("%lf\n", a[i]);
+}
+
 
 void MatrixMultiply(double *d_A, double *d_B, double *d_C, int A_H, int A_W, int B_W)
 {
@@ -125,11 +131,13 @@ private:
         cout << "1";
         cudaMemcpy(input_d, input + batch * batch_size * in, sizeof(double) * batch_size * in, cudaMemcpyHostToDevice);
         cout << "1";
+        Print<<<1, 1>>>(input_d, batch_size * in);
         double *ret = new double[out * batch_size], *ret_d;
         cout << "1";
         cudaMalloc((void**) &ret_d, out * batch_size * sizeof(double));
         cout << "1";
         MatrixMultiply(input_d, *w_d, ret_d, batch_size, in, out);
+        Print<<<1, 1>>>(ret_d, batch_size * out);
         cout << "1";
         cudaMemcpy(ret, ret_d, sizeof(double) * out * batch_size, cudaMemcpyDeviceToHost);
         cout << "1";
