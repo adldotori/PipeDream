@@ -14,13 +14,15 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 #define SQR(a) (a) * (a)
-#define LEARNING_RATE 0.001
+#define LEARNING_RATE 0.0001
 #define DATA_SET 60000
 #define TEST_DATA_SET 10000
-#define BATCH_SIZE 100
-#define BUFSIZE 2000
+#define BATCH_SIZE 1000
+#define BUFSIZE 40000
 #define MAXSIZE 5000000
-#define OUT_SIZE 10
+#define OUT_SIZE 10 // the number of final class
+#define AIOCB_NUM 20 // the number of communication module
+#define EPOCH 1
 using namespace std;
 
 enum active_mode
@@ -107,7 +109,7 @@ private:
 
     void forwardProp(int batch)
     {
-        cout << "fw : " << batch << endl;
+        // cout << "fw : " << batch << endl;
         for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
         {
             double *ret = new double[out];
@@ -140,7 +142,7 @@ private:
 
     void backwardProp(int batch)
     {
-        cout << "bw : " << batch << endl;
+        // cout << "bw : " << batch << endl;
         for (int k = batch * batch_size; k < (batch + 1) * batch_size; k++)
         {
             for (int j = 0; j < out; j++)
@@ -349,10 +351,6 @@ public:
         // initialization
         in = in_;
         out = out_;
-        len = DATA_SET;
-        batch_size = BATCH_SIZE;
-        tot_batch = (len - 1) / batch_size + 1;
-        input = new double[len * in];
         output = NULL;
         this->active = active;
         this->layer_type = layer_type;
@@ -381,9 +379,6 @@ public:
         b = new double[out];
         for (int i = 0; i < out; i++)
             b[i] = 0;
-        predict = new double[len * out];
-        pre_pardiff = new double[len * out];
-        recv_aiocb = new struct aiocb * [tot_batch * 2];
         if (layer_type != Output)
             connNext();
         if (layer_type != Input)
@@ -395,6 +390,12 @@ public:
     void getData(double *input, double *output, int len = DATA_SET)
     {
         this->len = len;
+        batch_size = BATCH_SIZE;
+        tot_batch = (len - 1) / batch_size + 1;
+        this->input = new double[len * in];
+        predict = new double[len * out];
+        pre_pardiff = new double[len * out];
+        recv_aiocb = new struct aiocb * [AIOCB_NUM];
         if (input != NULL && output != NULL)
         {
             this->input = input;
@@ -419,8 +420,9 @@ public:
                     cout << "ERROR!" << endl;
                     exit(1);
                 }
+                free(my_aiocb);
             }
-        } 
+        }
         if (layer_type != Output)
         {
             struct aiocb *my_aiocb = new_aiocb(after_socket, this->output, len * OUT_SIZE * 8);
@@ -428,6 +430,7 @@ public:
             while (my_aiocb->aio_fildes == after_socket)
             {
             }
+            free(my_aiocb);
         }
     }
 
@@ -436,7 +439,6 @@ public:
         for (int i = 0; i < step; i++)
         {
             cout << "training " << i + 1 << endl;
-            cout << tot_batch;
             int batch = 0, mach_idx;
             if (layer_type == Output)
                 mach_idx = 0;
@@ -449,27 +451,28 @@ public:
 
                 // recvAfter(i - 2k - 1)
                 if (b_batch >= 0 && b_batch < tot_batch)
-                    recv_aiocb[b_batch] = recvAfter(b_batch);
+                    recv_aiocb[(2 * b_batch + 1)%AIOCB_NUM] = recvAfter(b_batch);
 
                 // forward(i - 1)
                 if (f_batch >= 0 && f_batch < tot_batch)
                 {
-                    if (recv_aiocb[2 * f_batch])
-                        while (recv_aiocb[2 * f_batch]->aio_fildes == before_socket)
+                    if (recv_aiocb[(2 * f_batch)%AIOCB_NUM]) {
+                        while (recv_aiocb[(2 * f_batch)%AIOCB_NUM]->aio_fildes == before_socket)
                         {
                         }
+                    }
                     forward(f_batch);
                 }
 
                 // recvBefore(i)
                 if (batch >= 0 && batch < tot_batch)
-                    recv_aiocb[2 * batch] = recvBefore(batch);
+                    recv_aiocb[(2 * batch)%AIOCB_NUM] = recvBefore(batch);
 
                 // backward(i - 2k -1)
                 if (b_batch >= 0 && b_batch < tot_batch)
                 {
-                    if (recv_aiocb[2 * b_batch + 1])
-                        while (recv_aiocb[2 * b_batch + 1]->aio_fildes == after_socket)
+                    if (recv_aiocb[(2 * b_batch + 1)%AIOCB_NUM])
+                        while (recv_aiocb[(2 * b_batch + 1)%AIOCB_NUM]->aio_fildes == after_socket)
                         {
                         }
                     backward(b_batch);
@@ -481,16 +484,15 @@ public:
     void test(void)
     {
         cout << "TEST" << endl;
-        batch_size = len / 2;
-        tot_batch = 2;
+        batch_size = len / 10;
+        tot_batch = 10;
         for (int i = 0; i < tot_batch; i++)
         {
             cout << i;
-            recv_aiocb[i] = recvBefore(i);
-            if (recv_aiocb[i])
-                while (recv_aiocb[i]->aio_fildes == before_socket)
+            struct aiocb * test_aiocb = recvBefore(i);
+            if (test_aiocb)
+                while (test_aiocb->aio_fildes == before_socket)
                 {
-                    // cout << "waiting";
                 }
             forward(i);
             if (layer_type == Output && i == tot_batch - 1)
@@ -558,7 +560,7 @@ void download_test(double *input[], double *output[])
 
 int main(int argc, char **argv)
 {
-    int ch, count = 1;
+    int ch, count = EPOCH;
     while ((ch = getopt(argc, argv, "i:p:l:")) != -1)
     {
         switch (ch)
